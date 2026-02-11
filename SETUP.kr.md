@@ -212,6 +212,7 @@ DISCORD_GUILD_ID=여기에_서버_ID_붙여넣기
 ALLOWED_USER_IDS=여기에_사용자_ID_붙여넣기
 BASE_PROJECT_DIR=/Users/yourname/projects
 RATE_LIMIT_PER_MINUTE=10
+SHOW_COST=true
 ```
 
 | 변수 | 설명 | 예시 |
@@ -221,6 +222,7 @@ RATE_LIMIT_PER_MINUTE=10
 | `ALLOWED_USER_IDS` | 4단계에서 복사한 사용자 ID | `942037337519575091` |
 | `BASE_PROJECT_DIR` | 프로젝트들이 있는 상위 디렉토리 | `/Users/you/projects` |
 | `RATE_LIMIT_PER_MINUTE` | 분당 메시지 제한 (기본 10) | `10` |
+| `SHOW_COST` | 결과에 예상 API 비용 표시 (기본 true) | `false` |
 
 `BASE_PROJECT_DIR`은 `/register` 명령에서 폴더 이름만 입력할 때 기준 경로가 됩니다.
 예: `BASE_PROJECT_DIR=/Users/you/projects`이면 `/register my-app` → `/Users/you/projects/my-app`

@@ -214,6 +214,7 @@ DISCORD_GUILD_ID=your_server_id_here
 ALLOWED_USER_IDS=your_user_id_here
 BASE_PROJECT_DIR=/Users/yourname/projects
 RATE_LIMIT_PER_MINUTE=10
+SHOW_COST=true
 ```
 
 | Variable | Description | Example |
@@ -223,6 +224,7 @@ RATE_LIMIT_PER_MINUTE=10
 | `ALLOWED_USER_IDS` | User ID from step 4 | `942037337519575091` |
 | `BASE_PROJECT_DIR` | Parent directory of your projects | `/Users/you/projects` |
 | `RATE_LIMIT_PER_MINUTE` | Message rate limit (default 10) | `10` |
+| `SHOW_COST` | Show estimated API cost in results (default true) | `false` |
 
 `BASE_PROJECT_DIR` is the base path when using folder names in `/register`.
 Example: If `BASE_PROJECT_DIR=/Users/you/projects`, then `/register my-app` → `/Users/you/projects/my-app`

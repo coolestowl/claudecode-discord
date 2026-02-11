@@ -11,6 +11,7 @@ Run independent Claude Code sessions per channel, with tool use approval/denial 
 - 📱 Remote control Claude Code from Discord (desktop/web/mobile)
 - 🔀 Independent sessions per channel (project directory mapping)
 - ✅ Tool use approve/deny via Discord button UI
+- ❓ Interactive question UI (selectable options + custom text input)
 - ⏹️ Stop button for instant cancellation during progress
 - 📎 File attachments support (images, documents, code files)
 - 🔄 Session resume/delete (persist across bot restarts)
