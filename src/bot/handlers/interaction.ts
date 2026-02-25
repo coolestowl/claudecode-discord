@@ -123,7 +123,7 @@ export async function handleButtonInteraction(
     // requestId format: "uuid:optionIndex"
     const lastColon = requestId.lastIndexOf(":");
     const actualRequestId = requestId.slice(0, lastColon);
-    const selectedLabel = interaction.component.label ?? "Unknown";
+    const selectedLabel = ("label" in interaction.component ? interaction.component.label : null) ?? "Unknown";
 
     const resolved = sessionManager.resolveQuestion(actualRequestId, selectedLabel);
     if (!resolved) {

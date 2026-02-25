@@ -98,8 +98,8 @@ class SessionManager {
           content: `⏳ ${lastActivity} (${timeStr})`,
           components: [stopRow],
         });
-      } catch {
-        // ignore edit failures
+      } catch (e) {
+        console.warn(`[heartbeat] Failed to edit message for ${channelId}:`, e instanceof Error ? e.message : e);
       }
     }, 15_000);
 
@@ -145,8 +145,8 @@ class SessionManager {
                   content: `⏳ ${lastActivity} (${timeStr}) [${toolUseCount} tools used]`,
                   components: [stopRow],
                 });
-              } catch {
-                // ignore
+              } catch (e) {
+                console.warn(`[tool-status] Failed to edit message for ${channelId}:`, e instanceof Error ? e.message : e);
               }
             }
 
@@ -310,8 +310,8 @@ class SessionManager {
                 currentMessage = await channel.send(chunks[i]);
                 responseBuffer = chunks.slice(i + 1).join("");
               }
-            } catch {
-              // Message may have been deleted, send new one
+            } catch (e) {
+              console.warn(`[stream] Failed to edit message for ${channelId}, sending new:`, e instanceof Error ? e.message : e);
               currentMessage = await channel.send(
                 chunks[chunks.length - 1] || "...",
               );
@@ -335,8 +335,8 @@ class SessionManager {
               for (let i = 1; i < chunks.length; i++) {
                 await channel.send(chunks[i]);
               }
-            } catch {
-              // ignore
+            } catch (e) {
+              console.warn(`[flush] Failed to edit final message for ${channelId}:`, e instanceof Error ? e.message : e);
             }
           }
 
@@ -345,8 +345,8 @@ class SessionManager {
             await currentMessage.edit({
               components: [createCompletedButton()],
             });
-          } catch {
-            // message may have been edited already
+          } catch (e) {
+            console.warn(`[complete] Failed to update completed button for ${channelId}:`, e instanceof Error ? e.message : e);
           }
 
           // Send result embed
@@ -369,6 +369,15 @@ class SessionManager {
     } finally {
       clearInterval(heartbeatInterval);
       this.sessions.delete(channelId);
+
+      // Clean up any pending approvals/questions for this channel
+      for (const [id, entry] of pendingApprovals) {
+        if (entry.channelId === channelId) pendingApprovals.delete(id);
+      }
+      for (const [id, entry] of pendingQuestions) {
+        if (entry.channelId === channelId) pendingQuestions.delete(id);
+      }
+      pendingCustomInputs.delete(channelId);
 
       // Process next queued message if any
       const queue = this.messageQueue.get(channelId);
@@ -396,6 +405,16 @@ class SessionManager {
     }
 
     this.sessions.delete(channelId);
+
+    // Clean up any pending approvals/questions for this channel
+    for (const [id, entry] of pendingApprovals) {
+      if (entry.channelId === channelId) pendingApprovals.delete(id);
+    }
+    for (const [id, entry] of pendingQuestions) {
+      if (entry.channelId === channelId) pendingQuestions.delete(id);
+    }
+    pendingCustomInputs.delete(channelId);
+
     updateSessionStatus(channelId, "offline");
     return true;
   }

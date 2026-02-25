@@ -91,23 +91,41 @@ describe("validateProjectPath", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  it("returns error when path is outside BASE_PROJECT_DIR", () => {
+    const result = validateProjectPath("/etc/passwd");
+    expect(result).toContain("Path must be within");
+  });
+
+  it("does not call fs when path is outside BASE_PROJECT_DIR", () => {
+    const spy = vi.spyOn(fs, "existsSync");
+    validateProjectPath("/other/dir");
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("returns error when path does not exist", () => {
     vi.spyOn(fs, "existsSync").mockReturnValue(false);
-    const result = validateProjectPath("/nonexistent/path");
+    const result = validateProjectPath("/projects/nonexistent");
     expect(result).toContain("Path does not exist");
   });
 
   it("returns error when path is not a directory", () => {
     vi.spyOn(fs, "existsSync").mockReturnValue(true);
     vi.spyOn(fs, "statSync").mockReturnValue({ isDirectory: () => false } as fs.Stats);
-    const result = validateProjectPath("/some/file.txt");
+    const result = validateProjectPath("/projects/file.txt");
     expect(result).toContain("Path is not a directory");
   });
 
-  it("returns null for valid directory path", () => {
+  it("returns null for valid directory path within BASE_PROJECT_DIR", () => {
     vi.spyOn(fs, "existsSync").mockReturnValue(true);
     vi.spyOn(fs, "statSync").mockReturnValue({ isDirectory: () => true } as fs.Stats);
-    const result = validateProjectPath("/valid/project");
+    const result = validateProjectPath("/projects/my-app");
+    expect(result).toBeNull();
+  });
+
+  it("allows BASE_PROJECT_DIR itself", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "statSync").mockReturnValue({ isDirectory: () => true } as fs.Stats);
+    const result = validateProjectPath("/projects");
     expect(result).toBeNull();
   });
 });

@@ -33,6 +33,13 @@ export function validateProjectPath(projectPath: string): string | null {
     return "Path must not contain '..'";
   }
 
+  // Validate path is within BASE_PROJECT_DIR
+  const config = getConfig();
+  const baseDir = path.resolve(config.BASE_PROJECT_DIR);
+  if (!resolved.startsWith(baseDir + path.sep) && resolved !== baseDir) {
+    return `Path must be within ${baseDir}`;
+  }
+
   // Check existence
   if (!fs.existsSync(resolved)) {
     return `Path does not exist: ${resolved}`;
