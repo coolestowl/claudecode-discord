@@ -14,6 +14,7 @@ import {
   createAskUserQuestionEmbed,
   createResultEmbed,
   createStopButton,
+  createCompletedButton,
   splitMessage,
   type AskQuestionData,
 } from "./output-formatter.js";
@@ -337,6 +338,15 @@ class SessionManager {
             } catch {
               // ignore
             }
+          }
+
+          // Replace stop button with completed button
+          try {
+            await currentMessage.edit({
+              components: [createCompletedButton()],
+            });
+          } catch {
+            // message may have been edited already
           }
 
           // Send result embed

@@ -72,6 +72,17 @@ export function createStopButton(
   );
 }
 
+export function createCompletedButton(): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId("completed")
+      .setLabel("Completed")
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji("✅")
+      .setDisabled(true),
+  );
+}
+
 export function createToolApprovalEmbed(
   toolName: string,
   input: Record<string, unknown>,
