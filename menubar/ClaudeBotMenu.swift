@@ -148,12 +148,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     runShell("launchctl load '\(plistDst)'")
                 }
 
-                // Restart menu bar app
-                let script = """
-                    sleep 1
-                    open '\(swiftBin)'
-                    """
-                runShell("echo '\(script)' | bash &")
+                // Restart menu bar app (detached from terminal)
+                runShell("nohup bash -c 'sleep 1 && \"\(swiftBin)\"' > /dev/null 2>&1 &")
 
                 NSApplication.shared.terminate(nil)
                 return
