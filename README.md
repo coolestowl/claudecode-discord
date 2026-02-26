@@ -260,6 +260,12 @@ win-start.bat --status &:: Check status
 win-start.bat --fg     &:: Foreground mode (for debugging)
 ```
 
+The bot runs in the background with a **system tray icon**:
+
+<p align="center">
+  <img src="docs/windows-tray-icon.png" alt="Windows System Tray Icon" width="300">
+</p>
+
 - **Control Panel GUI**: left-click tray icon for start/stop/restart, settings, log viewer, auto-update
 - **EN / KR language toggle** with persistent preference
 - System tray: green (running) / red (stopped) / orange (setup needed)
