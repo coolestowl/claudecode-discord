@@ -110,7 +110,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 self.updateAvailable = hasUpdate
                 self.buildMenu()
+                self.rebuildControlPanel()
             }
+        }
+    }
+
+    @objc private func checkUpdateClicked() {
+        checkForUpdates()
+        if !updateAvailable {
+            let alert = NSAlert()
+            alert.messageText = L("No Updates", "업데이트 없음")
+            alert.informativeText = L("You are running the latest version.", "최신 버전을 사용 중입니다.")
+            alert.alertStyle = .informational
+            alert.runModal()
         }
     }
 
@@ -281,6 +293,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let updateItem = NSMenuItem(title: L("\u{2B06}\u{FE0F} Update Available", "\u{2B06}\u{FE0F} 업데이트 가능"), action: #selector(performUpdate), keyEquivalent: "u")
             updateItem.target = self
             menu.addItem(updateItem)
+        } else {
+            let checkItem = NSMenuItem(title: L("Check for Updates", "업데이트 확인"), action: #selector(checkUpdateClicked), keyEquivalent: "")
+            checkItem.target = self
+            menu.addItem(checkItem)
         }
 
         menu.addItem(NSMenuItem.separator())
@@ -506,7 +522,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         autoStartBtn.font = NSFont.systemFont(ofSize: 12)
         elements.append((autoStartBtn, 26))
 
-        // Update button (if available)
+        // Update button
         if updateAvailable {
             let updateBtn = createStyledButton(
                 title: L("Update Available - Click to Update", "업데이트 가능 - 클릭하여 업데이트"), width: contentWidth,
@@ -516,6 +532,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             updateBtn.target = self
             updateBtn.action = #selector(performUpdate)
             elements.append((updateBtn, 44))
+        } else {
+            let checkUpdateBtn = createStyledButton(
+                title: L("Check for Updates", "업데이트 확인"), width: contentWidth,
+                bgColor: NSColor(white: 0.5, alpha: 0.1), fgColor: .labelColor
+            )
+            checkUpdateBtn.frame = NSRect(x: 0, y: 0, width: contentWidth, height: 36)
+            checkUpdateBtn.target = self
+            checkUpdateBtn.action = #selector(checkUpdateClicked)
+            elements.append((checkUpdateBtn, 44))
         }
 
         // Separator
