@@ -301,4 +301,8 @@ npm run test:watch   # 테스트 watch 모드
 
 ## 라이선스
 
-[MIT License](LICENSE) - 자유롭게 사용, 수정, 상업적 이용 가능. 배포 시 원본 저작권 표시 및 [출처](https://github.com/chadingTV/claudecode-discord) 명시 필요.
+[MIT License](../LICENSE) - 자유롭게 사용, 수정, 상업적 이용 가능. 배포 시 원본 저작권 표시 및 [출처](https://github.com/chadingTV/claudecode-discord) 명시 필요.
+
+---
+
+이 프로젝트가 유용하셨다면 ⭐ 를 눌러주세요 — 더 많은 사람들이 발견할 수 있게 됩니다!

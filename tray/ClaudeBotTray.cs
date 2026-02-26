@@ -728,7 +728,7 @@ class ClaudeBotTray : Form
         {
             Text = "Claude Discord Bot",
             Width = panelWidth,
-            Height = 560,
+            Height = 590,
             StartPosition = FormStartPosition.CenterScreen,
             FormBorderStyle = FormBorderStyle.FixedDialog,
             MaximizeBox = false,
@@ -935,7 +935,20 @@ class ClaudeBotTray : Form
         };
         ghLink.LinkClicked += (s, ev) => { Process.Start("https://github.com/chadingTV/claudecode-discord"); };
         controlPanel.Controls.Add(ghLink);
-        y += 28;
+        y += 22;
+
+        // Star request
+        var starLabel = new Label()
+        {
+            Text = L("If you find this useful, please give it a Star on GitHub!",
+                      "유용하셨다면 GitHub에서 Star를 눌러주세요!"),
+            Left = 25, Top = y, Width = btnWidth, Height = 18,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Font = new Font(FontFamily.GenericSansSerif, 8f),
+            ForeColor = Color.Gray
+        };
+        controlPanel.Controls.Add(starLabel);
+        y += 25;
 
         controlPanel.Height = y + 45;
 
