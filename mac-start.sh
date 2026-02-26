@@ -70,10 +70,6 @@ if [ "$1" = "--fg" ]; then
 fi
 
 # Default: background mode (register with launchd)
-if [ ! -f "$PLIST_SRC" ]; then
-    echo "❌ $PLIST_NAME not found"
-    exit 1
-fi
 
 # Stop existing bot if running
 if launchctl list | grep -q "$LABEL"; then
@@ -105,8 +101,44 @@ is_env_configured() {
     [ -n "$guild" ] && [ "$guild" != "your_server_id_here" ]
 }
 
+generate_plist() {
+    cat > "$PLIST_DST" <<PLISTEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>$LABEL</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>$SCRIPT_DIR/mac-start.sh</string>
+        <string>--fg</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>$SCRIPT_DIR</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>StandardOutPath</key>
+    <string>$SCRIPT_DIR/bot.log</string>
+    <key>StandardErrorPath</key>
+    <string>$SCRIPT_DIR/bot-error.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+</dict>
+</plist>
+PLISTEOF
+}
+
 if is_env_configured; then
-    cp "$PLIST_SRC" "$PLIST_DST"
+    generate_plist
     launchctl load "$PLIST_DST"
     if [ -f "$MENUBAR" ]; then
         echo "🟢 Bot started in background (menu bar active)"

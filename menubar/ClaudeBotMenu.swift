@@ -144,8 +144,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 runShell("swiftc -o '\(swiftBin)' '\(swiftSrc)' -framework Cocoa 2>&1")
 
                 if wasRunning {
-                    let plistSrc = "\(botDir)/com.claude-discord.plist"
-                    runShell("cp '\(plistSrc)' '\(plistDst)' && launchctl load '\(plistDst)'")
+                    generatePlist()
+                    runShell("launchctl load '\(plistDst)'")
                 }
 
                 // Restart menu bar app
@@ -160,8 +160,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             if wasRunning {
-                let plistSrc = "\(botDir)/com.claude-discord.plist"
-                runShell("cp '\(plistSrc)' '\(plistDst)' && launchctl load '\(plistDst)'")
+                generatePlist()
+                runShell("launchctl load '\(plistDst)'")
             }
 
             let doneAlert = NSAlert()
@@ -902,22 +902,61 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func toggleAutoStart() {
-        let plistSrc = "\(botDir)/com.claude-discord.plist"
         if FileManager.default.fileExists(atPath: plistDst) {
             runShell("launchctl unload '\(plistDst)' 2>/dev/null")
             try? FileManager.default.removeItem(atPath: plistDst)
         } else {
-            runShell("cp '\(plistSrc)' '\(plistDst)' && launchctl load '\(plistDst)'")
+            generatePlist()
+            runShell("launchctl load '\(plistDst)'")
         }
         buildMenu()
         rebuildControlPanel()
     }
 
+    // MARK: - Plist Generation
+
+    private func generatePlist() {
+        let content = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>Label</key>
+            <string>\(label)</string>
+            <key>ProgramArguments</key>
+            <array>
+                <string>/bin/bash</string>
+                <string>\(botDir)/mac-start.sh</string>
+                <string>--fg</string>
+            </array>
+            <key>WorkingDirectory</key>
+            <string>\(botDir)</string>
+            <key>RunAtLoad</key>
+            <true/>
+            <key>KeepAlive</key>
+            <true/>
+            <key>ThrottleInterval</key>
+            <integer>10</integer>
+            <key>StandardOutPath</key>
+            <string>\(botDir)/bot.log</string>
+            <key>StandardErrorPath</key>
+            <string>\(botDir)/bot-error.log</string>
+            <key>EnvironmentVariables</key>
+            <dict>
+                <key>PATH</key>
+                <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+            </dict>
+        </dict>
+        </plist>
+        """
+        try? content.write(toFile: plistDst, atomically: true, encoding: .utf8)
+    }
+
     // MARK: - Bot Controls
 
     @objc private func startBot() {
-        let plistSrc = "\(botDir)/com.claude-discord.plist"
-        runShell("cp '\(plistSrc)' '\(plistDst)' && launchctl load '\(plistDst)'")
+        generatePlist()
+        runShell("launchctl load '\(plistDst)'")
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             self.updateStatus()
             self.buildMenu()
@@ -937,8 +976,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func restartBot() {
         runShell("launchctl unload '\(plistDst)' 2>/dev/null")
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            let plistSrc = "\(self.botDir)/com.claude-discord.plist"
-            self.runShell("cp '\(plistSrc)' '\(self.plistDst)' && launchctl load '\(self.plistDst)'")
+            self.generatePlist()
+            self.runShell("launchctl load '\(self.plistDst)'")
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                 self.updateStatus()
                 self.buildMenu()
