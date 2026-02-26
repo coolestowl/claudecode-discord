@@ -794,17 +794,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         accessory.addSubview(showCostLabel)
 
         y -= fieldHeight
-        let radioContainer = NSView(frame: NSRect(x: 0, y: y, width: width, height: fieldHeight))
-        let showCostTrue = NSButton(radioButtonWithTitle: L("true (show cost)", "true (비용 표시)"), target: nil, action: nil)
-        showCostTrue.frame = NSRect(x: 0, y: 0, width: width / 2, height: fieldHeight)
+        let showCostTrue = NSButton(checkboxWithTitle: L("true (show cost)", "true (비용 표시)"), target: self, action: #selector(radioToggled(_:)))
+        showCostTrue.setButtonType(.radio)
+        showCostTrue.frame = NSRect(x: 0, y: y, width: width / 2, height: fieldHeight)
         showCostTrue.font = NSFont.systemFont(ofSize: 12)
-        radioContainer.addSubview(showCostTrue)
+        showCostTrue.tag = 1001
+        accessory.addSubview(showCostTrue)
 
-        let showCostFalse = NSButton(radioButtonWithTitle: L("false (Max plan)", "false (Max 요금제)"), target: nil, action: nil)
-        showCostFalse.frame = NSRect(x: width / 2, y: 0, width: width / 2, height: fieldHeight)
+        let showCostFalse = NSButton(checkboxWithTitle: L("false (Max plan)", "false (Max 요금제)"), target: self, action: #selector(radioToggled(_:)))
+        showCostFalse.setButtonType(.radio)
+        showCostFalse.frame = NSRect(x: width / 2, y: y, width: width / 2, height: fieldHeight)
         showCostFalse.font = NSFont.systemFont(ofSize: 12)
-        radioContainer.addSubview(showCostFalse)
-        accessory.addSubview(radioContainer)
+        showCostFalse.tag = 1002
+        accessory.addSubview(showCostFalse)
 
         let currentShowCost = env["SHOW_COST"] ?? "true"
         if currentShowCost.lowercased() == "false" {
@@ -881,6 +883,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSetupGuide() {
         NSWorkspace.shared.open(URL(string: "https://github.com/chadingTV/claudecode-discord/blob/main/SETUP.md")!)
+    }
+
+    @objc private func radioToggled(_ sender: NSButton) {
+        guard let parent = sender.superview else { return }
+        for case let btn as NSButton in parent.subviews where btn.tag == 1001 || btn.tag == 1002 {
+            btn.state = (btn === sender) ? .on : .off
+        }
     }
 
     @objc private func browseFolderClicked(_ sender: NSButton) {
