@@ -169,7 +169,7 @@ class ClaudeBotTray : Form
         // git pull
         RunCmdOutput("git", "-C \"" + botDir + "\" pull origin main --tags");
         // npm install & build
-        RunCmd("cd /d \"" + botDir + "\" && npm install --production && npm run build", true);
+        RunCmd("cd /d \"" + botDir + "\" && npm install && npm run build", true);
 
         currentVersion = GetVersion();
         updateAvailable = false;
