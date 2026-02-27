@@ -95,55 +95,35 @@ cd claudecode-discord
 
 Windows users: `install.bat` handles everything automatically — installs dependencies, builds, creates a desktop shortcut, and launches the bot with a system tray GUI.
 
-## Project Structure
+<details>
+<summary><strong>Project Structure</strong></summary>
 
 ```
 claudecode-discord/
-├── install.sh              # macOS/Linux auto-installer
-├── install.bat             # Windows auto-installer
-├── mac-start.sh            # macOS background launcher + menu bar
-├── linux-start.sh          # Linux background launcher + system tray
-├── win-start.bat           # Windows background launcher + system tray
-├── menubar/                # macOS menu bar status app (Swift)
-├── tray/                   # System tray app (Linux: Python, Windows: C#)
-├── .env.example            # Environment variable template
+├── install.sh / install.bat    # Auto-installers
+├── mac-start.sh                # macOS background launcher + menu bar
+├── linux-start.sh              # Linux background launcher + system tray
+├── win-start.bat               # Windows background launcher + system tray
+├── menubar/                    # macOS menu bar app (Swift)
+├── tray/                       # System tray app (Linux: Python, Windows: C#)
 ├── src/
-│   ├── index.ts            # Entry point
+│   ├── index.ts                # Entry point
 │   ├── bot/
-│   │   ├── client.ts       # Discord bot init & events
-│   │   ├── commands/       # Slash commands
-│   │   │   ├── register.ts
-│   │   │   ├── unregister.ts
-│   │   │   ├── status.ts
-│   │   │   ├── stop.ts
-│   │   │   ├── auto-approve.ts
-│   │   │   ├── sessions.ts
-│   │   │   ├── last.ts
-│   │   │   └── clear-sessions.ts
-│   │   └── handlers/       # Event handlers
-│   │       ├── message.ts
-│   │       └── interaction.ts
+│   │   ├── client.ts           # Discord bot init & events
+│   │   ├── commands/           # Slash commands (8)
+│   │   └── handlers/           # Message & interaction handlers
 │   ├── claude/
-│   │   ├── session-manager.ts   # Session lifecycle
-│   │   └── output-formatter.ts  # Discord output formatting
-│   ├── db/
-│   │   ├── database.ts     # SQLite init & queries
-│   │   └── types.ts
-│   ├── security/
-│   │   └── guard.ts        # Auth, rate limit
-│   └── utils/
-│       └── config.ts       # Env var validation (zod)
-├── SETUP.md                # macOS/Linux setup guide (EN)
-├── docs/                   # Translations, extras & screenshots
-│   ├── README.kr.md        # Korean README
-│   ├── SETUP.kr.md         # macOS/Linux setup guide (KR)
-│   ├── SETUP-WINDOWS.md    # Windows setup guide (EN)
-│   ├── SETUP-WINDOWS.kr.md # Windows setup guide (KR)
-│   ├── TESTING.md          # Testing guide
-│   └── *.png               # Screenshots
-├── package.json
-└── tsconfig.json
+│   │   ├── session-manager.ts  # Session lifecycle
+│   │   └── output-formatter.ts # Discord output formatting
+│   ├── db/                     # SQLite (better-sqlite3)
+│   ├── security/               # Auth, rate limit, path validation
+│   └── utils/                  # Config (zod)
+├── SETUP.md                    # macOS/Linux setup guide
+├── docs/                       # Translations, screenshots
+└── package.json
 ```
+
+</details>
 
 ## Usage
 
@@ -172,7 +152,8 @@ Attach images, documents, or code files and Claude can read and analyze them.
 - Sending a new message while busy offers **message queue** — auto-processes after current task completes
 - `/stop` slash command also available
 
-## Architecture
+<details>
+<summary><strong>Architecture</strong></summary>
 
 ```
 [Mobile Discord] ←→ [Discord Bot] ←→ [Session Manager] ←→ [Claude Agent SDK]
@@ -187,14 +168,9 @@ Attach images, documents, or code files and Claude can read and analyze them.
 - Heartbeat progress display every 15s until text output begins
 - Markdown code blocks preserved across message splits
 
-## Session States
+**Session States:** 🟢 working · 🟡 waiting for approval · ⚪ idle · 🔴 offline
 
-| State | Meaning |
-|-------|---------|
-| 🟢 online | Claude is working |
-| 🟡 waiting | Waiting for tool use approval |
-| ⚪ idle | Task complete, waiting for input |
-| 🔴 offline | No session |
+</details>
 
 ## Security
 
@@ -228,9 +204,11 @@ The bot runs entirely on your own PC/server. No external servers involved, and n
 - The `.env` file contains your bot token — **never share it publicly.** If compromised, immediately Reset Token in Discord Developer Portal
 - `auto-approve` mode is convenient but may allow Claude to perform unintended actions — use only on trusted projects
 
-## macOS Quick Start (Background + Menu Bar)
+## Quick Start by Platform
 
-On macOS, you can run the bot as a background service with a menu bar status indicator and control panel.
+Each platform runs the bot as a background service with a native GUI for control — no terminal babysitting needed.
+
+### macOS — Menu Bar App
 
 <p align="center">
   <img src="docs/mac-tray.png" alt="macOS Control Panel" width="400">
@@ -239,59 +217,24 @@ On macOS, you can run the bot as a background service with a menu bar status ind
 ```bash
 ./mac-start.sh          # Start (background + menu bar icon)
 ./mac-start.sh --stop   # Stop
-./mac-start.sh --status # Check status
-./mac-start.sh --fg     # Foreground mode (for debugging)
 ```
 
-The bot runs in the background with a **menu bar icon**:
+Control panel GUI, settings dialog, auto-update, auto-restart on crash, auto-start on boot (launchd). → **[Full guide](SETUP.md)**
 
-<p align="center">
-  <img src="docs/mac-tray-icon.png" alt="macOS Menu Bar Icon" width="300">
-</p>
-
-- **Control Panel GUI**: left-click menu bar icon to open control panel (right-click for dropdown menu)
-- **EN / KR language toggle** with persistent preference
-- First run opens control panel automatically; prompts GUI settings dialog if `.env` not configured
-- Menu bar icon: 🟢 running / 🔴 stopped / ⚙️ setup needed
-- GUI Settings dialog — no manual `.env` editing needed:
-
-<p align="center">
-  <img src="docs/mac-settings.png" alt="macOS Settings Dialog" width="400">
-</p>
-
-- One-click auto-update: pulls code, rebuilds bot and menu bar app
-- Auto-restarts on crash, auto-starts on boot (via launchd)
-
-> **Note:** This feature is macOS-only (requires launchd and Swift).
-
-## Linux Quick Start (Background + System Tray)
-
-On Linux, you can run the bot as a systemd user service with an optional system tray indicator.
-
-```bash
-./linux-start.sh          # Start (systemd + tray icon if GUI available)
-./linux-start.sh --stop   # Stop
-./linux-start.sh --status # Check status
-./linux-start.sh --fg     # Foreground mode (for debugging)
-```
+### Linux — System Tray
 
 <p align="center">
   <img src="docs/linux-tray.png" alt="Linux System Tray" width="350">
 </p>
 
-- **EN / KR language toggle** with persistent preference
-- First run without `.env` prompts GUI settings dialog
-- System tray icon: green (running) / red (stopped) / orange (setup needed), with start/stop/settings menu
-- GUI Settings dialog with folder browser (GTK3)
-- Version display, check for updates, and one-click update from tray
-- Auto-restarts on crash, auto-starts on boot (via systemd)
-- Desktop shortcut created on first run
-- Tray requires `pip3 install pystray Pillow` (auto-installed on first run)
-- Works without GUI (headless server) — tray is skipped automatically
+```bash
+./linux-start.sh          # Start (systemd + tray icon)
+./linux-start.sh --stop   # Stop
+```
 
-## Windows Quick Start (Background + System Tray)
+System tray with GTK3 settings dialog, auto-restart, auto-start on boot (systemd). Works headless too. → **[Full guide](SETUP.md)**
 
-On Windows, `install.bat` sets up everything and creates a **desktop shortcut**. Double-click it to launch.
+### Windows — System Tray + Control Panel
 
 <p align="center">
   <img src="docs/windows-tray.png" alt="Windows Control Panel" width="400">
@@ -300,29 +243,9 @@ On Windows, `install.bat` sets up everything and creates a **desktop shortcut**.
 ```batch
 win-start.bat          &:: Start (background + tray + control panel)
 win-start.bat --stop   &:: Stop
-win-start.bat --status &:: Check status
-win-start.bat --fg     &:: Foreground mode (for debugging)
 ```
 
-The bot runs in the background with a **system tray icon**:
-
-<p align="center">
-  <img src="docs/windows-tray-icon.png" alt="Windows System Tray Icon" width="300">
-</p>
-
-- **Control Panel GUI**: left-click tray icon for start/stop/restart, settings, log viewer, auto-update
-- **EN / KR language toggle** with persistent preference
-- System tray: green (running) / red (stopped) / orange (setup needed)
-- GUI Settings dialog — no manual `.env` editing needed:
-
-<p align="center">
-  <img src="docs/windows-settings.png" alt="Windows Settings Dialog" width="400">
-</p>
-- One-click auto-update: pulls code, rebuilds, recompiles tray app
-- Auto-starts on logon (via Windows Registry)
-- Desktop shortcut created by `install.bat`
-
-> See **[SETUP-WINDOWS.md](docs/SETUP-WINDOWS.md)** for the full Windows guide.
+Desktop shortcut, control panel GUI, settings dialog, auto-update, auto-start on logon (Registry). → **[Full guide](docs/SETUP-WINDOWS.md)**
 
 ## Development
 
