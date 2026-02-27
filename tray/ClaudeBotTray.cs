@@ -584,17 +584,15 @@ class ClaudeBotTray : Form
             new string[] { "ALLOWED_USER_IDS", L("Allowed User IDs (comma-separated)", "허용된 사용자 ID (쉼표로 구분)") },
             new string[] { "BASE_PROJECT_DIR", L("Base Project Directory", "기본 프로젝트 디렉토리") },
             new string[] { "RATE_LIMIT_PER_MINUTE", L("Rate Limit Per Minute", "분당 요청 제한") },
-            new string[] { "SHOW_COST", L("Show Cost (true/false)", "비용 표시 (true/false)") },
         };
 
-        string[] defaults = new string[] { "", "", "", "", "10", "true" };
+        string[] defaults = new string[] { "", "", "", "", "10" };
         string[] placeholders = new string[] {
             L("Paste your bot token here", "봇 토큰을 여기에 붙여넣으세요"),
             L("Right-click server > Copy Server ID", "서버 우클릭 > 서버 ID 복사"),
             L("e.g. 123456789,987654321", "예: 123456789,987654321"),
             L("e.g. C:\\Users\\you\\projects", "예: C:\\Users\\you\\projects"),
-            "10",
-            "true"
+            "10"
         };
         // Placeholder values from .env.example that should be treated as empty
         var exampleValues = new System.Collections.Generic.HashSet<string>() {
@@ -685,10 +683,23 @@ class ClaudeBotTray : Form
             y += 34;
         }
 
-        var note = new Label() { Text = L("* Max plan users should set Show Cost to false",
-                                           "* Max 요금제 사용자는 Show Cost를 false로 설정하세요"), Left = 15, Top = y, Width = 450, ForeColor = FgDimGray, BackColor = Color.Transparent };
-        form.Controls.Add(note);
-        y += 25;
+        // Show Cost radio buttons
+        var showCostLabel = new Label() { Text = L("Show Cost", "비용 표시"), Left = 15, Top = y, Width = 450, Font = new Font(FontFamily.GenericSansSerif, 9, FontStyle.Bold), ForeColor = FgWhite, BackColor = Color.Transparent };
+        form.Controls.Add(showCostLabel);
+        y += 22;
+
+        string showCostVal = "true";
+        env.TryGetValue("SHOW_COST", out showCostVal);
+        if (showCostVal == null) showCostVal = "true";
+        bool showCostEnabled = (showCostVal.ToLower() != "false");
+
+        var radioTrue = new RadioButton() { Text = "True", Left = 15, Top = y, Width = 80, Height = 22, ForeColor = FgWhite, BackColor = Color.Transparent, Font = new Font(FontFamily.GenericSansSerif, 9.5f), Checked = showCostEnabled };
+        var radioFalse = new RadioButton() { Text = "False", Left = 100, Top = y, Width = 80, Height = 22, ForeColor = FgWhite, BackColor = Color.Transparent, Font = new Font(FontFamily.GenericSansSerif, 9.5f), Checked = !showCostEnabled };
+        var costNote = new Label() { Text = L("(set False for Max plan)", "(Max 요금제는 False)"), Left = 190, Top = y + 2, Width = 250, Height = 20, ForeColor = FgDimGray, BackColor = Color.Transparent, Font = new Font(FontFamily.GenericSansSerif, 8.5f) };
+        form.Controls.Add(radioTrue);
+        form.Controls.Add(radioFalse);
+        form.Controls.Add(costNote);
+        y += 34;
 
         var saveBtn = MakeDarkButton(L("Save", "저장"), 300, y, 80, 32, AccentBlue, Color.White);
         var cancelBtn = MakeDarkButton(L("Cancel", "취소"), 385, y, 80, 32, BgButton, FgWhite);
@@ -721,10 +732,10 @@ class ClaudeBotTray : Form
             {
                 for (int i = 0; i < fields.Length; i++)
                 {
-                    if (fields[i][0] == "SHOW_COST")
-                        sw.WriteLine("# Show estimated API cost in task results (set false for Max plan users)");
                     sw.WriteLine(fields[i][0] + "=" + values[i]);
                 }
+                sw.WriteLine("# Show estimated API cost in task results (set false for Max plan users)");
+                sw.WriteLine("SHOW_COST=" + (radioTrue.Checked ? "true" : "false"));
             }
 
             form.DialogResult = DialogResult.OK;
