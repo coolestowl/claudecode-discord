@@ -8,6 +8,10 @@
 
 Control Claude Code from your phone — a multi-machine agent hub via Discord.
 
+<p align="center">
+  <img src="docs/demo.gif" alt="Demo — register a project and code with Claude from Discord" width="300">
+</p>
+
 > **[Korean documentation (한국어)](docs/README.kr.md)**
 
 ## Why This Bot? — vs Official Remote Control

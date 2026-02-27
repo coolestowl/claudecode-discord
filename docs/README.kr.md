@@ -8,6 +8,10 @@
 
 폰에서 Claude Code를 제어하세요 — Discord를 통한 멀티머신 에이전트 허브.
 
+<p align="center">
+  <img src="demo.gif" alt="데모 — 프로젝트 등록 후 Discord에서 코딩" width="300">
+</p>
+
 ## 왜 이 봇인가? — 공식 Remote Control과의 차이
 
 Anthropic의 [Remote Control](https://code.claude.com/docs/en/remote-control)은 실행 중인 로컬 세션을 폰에서 이어보는 기능입니다. 이 봇은 그 이상 — 데몬으로 상주하며, 새 세션을 즉시 생성하고, 여러 PC를 하나의 Discord 서버에서 통합 관리하는 **멀티머신 에이전트 허브**입니다.
