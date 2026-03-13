@@ -13,7 +13,7 @@ import { L } from "../utils/i18n.js";
 import {
   createToolApprovalEmbed,
   createAskUserQuestionEmbed,
-  createResultEmbed,
+  formatResultAsPlainText,
   createStopButton,
   createCompletedButton,
   splitMessage,
@@ -350,14 +350,16 @@ class SessionManager {
             console.warn(`[complete] Failed to update completed button for ${channelId}:`, e instanceof Error ? e.message : e);
           }
 
-          // Send result embed
-          const resultEmbed = createResultEmbed(
+          // Send result as plain text for proper Markdown rendering
+          const resultChunks = formatResultAsPlainText(
             resultMsg.result ?? L("Task completed", "작업 완료"),
             resultMsg.total_cost_usd ?? 0,
             resultMsg.duration_ms ?? 0,
             getConfig().SHOW_COST,
           );
-          await channel.send({ embeds: [resultEmbed] });
+          for (const chunk of resultChunks) {
+            await channel.send(chunk);
+          }
 
           updateSessionStatus(channelId, "idle");
         }

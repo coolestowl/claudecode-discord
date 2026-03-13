@@ -269,3 +269,42 @@ export function createResultEmbed(
 
   return embed;
 }
+
+/**
+ * Format task completion as plain text messages (for proper Markdown rendering in Discord).
+ * Returns an array of message strings that respect Discord's character limit.
+ */
+export function formatResultAsPlainText(
+  result: string,
+  costUsd: number,
+  durationMs: number,
+  showCost: boolean = true,
+): string[] {
+  const duration = `${(durationMs / 1000).toFixed(1)}s`;
+  const metaLine = showCost
+    ? `-# ✅ ${L("Task Complete", "작업 완료")}  ·  ${L("Cost (est.)", "비용 (추정)")}: $${costUsd.toFixed(4)}  ·  ${L("Duration", "소요 시간")}: ${duration}`
+    : `-# ✅ ${L("Task Complete", "작업 완료")}  ·  ${L("Duration", "소요 시간")}: ${duration}`;
+
+  // Reserve space for the meta line + separator
+  const metaBlock = `${metaLine}`;
+  const metaBlockLen = metaBlock.length + 2; // +2 for \n\n separator
+
+  // First chunk gets the result text; subsequent chunks are overflow
+  const maxFirstChunk = MAX_DISCORD_LENGTH - metaBlockLen;
+  const trimmedResult = result.slice(0, 4000);
+
+  if (trimmedResult.length <= maxFirstChunk) {
+    return [`${trimmedResult}\n\n${metaBlock}`];
+  }
+
+  // Need to split: use splitMessage for smart code-fence-aware splitting
+  const chunks = splitMessage(trimmedResult);
+  // Append meta info to the last chunk
+  const lastIdx = chunks.length - 1;
+  if (chunks[lastIdx].length + metaBlockLen <= MAX_DISCORD_LENGTH) {
+    chunks[lastIdx] = `${chunks[lastIdx]}\n\n${metaBlock}`;
+  } else {
+    chunks.push(metaBlock);
+  }
+  return chunks;
+}

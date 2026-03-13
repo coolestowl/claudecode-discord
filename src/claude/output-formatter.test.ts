@@ -10,6 +10,7 @@ import {
   splitMessage,
   createToolApprovalEmbed,
   createResultEmbed,
+  formatResultAsPlainText,
   createAskUserQuestionEmbed,
   createStopButton,
   createCompletedButton,
@@ -207,6 +208,50 @@ describe("createResultEmbed", () => {
   it("truncates very long result text to 4000 chars", () => {
     const embed = createResultEmbed("x".repeat(5000), 0, 0);
     expect(embed.data.description!.length).toBeLessThanOrEqual(4000);
+  });
+});
+
+// ─── formatResultAsPlainText ───
+
+describe("formatResultAsPlainText", () => {
+  it("returns a single chunk with meta line for short result", () => {
+    const chunks = formatResultAsPlainText("Done!", 0.0123, 5000, true);
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]).toContain("Done!");
+    expect(chunks[0]).toContain("✅ Task Complete");
+    expect(chunks[0]).toContain("$0.0123");
+    expect(chunks[0]).toContain("5.0s");
+  });
+
+  it("hides cost when showCost is false", () => {
+    const chunks = formatResultAsPlainText("Done!", 0.0123, 5000, false);
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]).not.toContain("Cost");
+    expect(chunks[0]).not.toContain("$0.0123");
+    expect(chunks[0]).toContain("Duration");
+    expect(chunks[0]).toContain("5.0s");
+  });
+
+  it("uses -# markdown subtext syntax for meta line", () => {
+    const chunks = formatResultAsPlainText("Done!", 0, 1000, true);
+    expect(chunks[0]).toContain("-# ✅ Task Complete");
+  });
+
+  it("splits long result into multiple chunks", () => {
+    const longResult = "a".repeat(3000);
+    const chunks = formatResultAsPlainText(longResult, 0.01, 2000, true);
+    expect(chunks.length).toBeGreaterThanOrEqual(2);
+    // Meta line should be in the last chunk
+    const lastChunk = chunks[chunks.length - 1];
+    expect(lastChunk).toContain("✅ Task Complete");
+  });
+
+  it("truncates result to 4000 chars max", () => {
+    const veryLong = "x".repeat(5000);
+    const chunks = formatResultAsPlainText(veryLong, 0, 0, true);
+    const totalContent = chunks.join("");
+    // The actual result content should be at most 4000 chars (+ meta line)
+    expect(totalContent).not.toContain("x".repeat(4001));
   });
 });
 
