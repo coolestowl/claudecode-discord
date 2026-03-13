@@ -48,6 +48,31 @@ const pendingQuestions = new Map<
 // Pending custom text inputs: channelId -> requestId
 const pendingCustomInputs = new Map<string, { requestId: string }>();
 
+// Environment variables forwarded to Claude Code when auth_mode is 'api_key'
+const API_KEY_ENV_VARS = [
+  "ANTHROPIC_BASE_URL",
+  "ANTHROPIC_AUTH_TOKEN",
+  "ANTHROPIC_MODEL",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL",
+  "ANTHROPIC_SMALL_FAST_MODEL",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+  "DISABLE_NON_ESSENTIAL_MODEL_CALLS",
+  "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+] as const;
+
+function buildEnv(authMode: string): Record<string, string | undefined> | undefined {
+  if (authMode === "api_key") {
+    // Pass full process.env so the subprocess has all necessary context
+    return { ...process.env };
+  }
+  // subscription mode: strip API-key vars so Claude uses its own login
+  const env = { ...process.env };
+  for (const key of API_KEY_ENV_VARS) {
+    delete env[key];
+  }
+  return env;
+}
+
 class SessionManager {
   private sessions = new Map<string, ActiveSession>();
   private static readonly MAX_QUEUE_SIZE = 5;
@@ -110,6 +135,7 @@ class SessionManager {
         options: {
           cwd: project.project_path,
           permissionMode: "default",
+          env: buildEnv(project.auth_mode ?? "subscription"),
           ...(resumeSessionId ? { resume: resumeSessionId } : {}),
 
           canUseTool: async (

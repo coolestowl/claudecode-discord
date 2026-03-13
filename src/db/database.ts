@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import path from "node:path";
-import type { Project, Session, SessionStatus } from "./types.js";
+import type { AuthMode, Project, Session, SessionStatus } from "./types.js";
 
 const DB_PATH = path.join(process.cwd(), "data.db");
 
@@ -17,6 +17,7 @@ export function initDatabase(): void {
       project_path TEXT NOT NULL,
       guild_id TEXT NOT NULL,
       auto_approve INTEGER DEFAULT 0,
+      auth_mode TEXT DEFAULT 'subscription',
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -29,6 +30,12 @@ export function initDatabase(): void {
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);
+
+  // Migrate existing databases that lack the auth_mode column
+  const cols = db.pragma("table_info(projects)") as { name: string }[];
+  if (!cols.some((c) => c.name === "auth_mode")) {
+    db.exec("ALTER TABLE projects ADD COLUMN auth_mode TEXT DEFAULT 'subscription'");
+  }
 }
 
 export function getDb(): Database.Database {
@@ -71,6 +78,13 @@ export function setAutoApprove(
 ): void {
   db.prepare("UPDATE projects SET auto_approve = ? WHERE channel_id = ?").run(
     autoApprove ? 1 : 0,
+    channelId,
+  );
+}
+
+export function setAuthMode(channelId: string, mode: AuthMode): void {
+  db.prepare("UPDATE projects SET auth_mode = ? WHERE channel_id = ?").run(
+    mode,
     channelId,
   );
 }
