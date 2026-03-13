@@ -47,6 +47,7 @@ export async function execute(
         `\`${project.project_path}\``,
         `${L("Status", "상태")}: **${status}**`,
         `${L("Auto-approve", "자동 승인")}: ${project.auto_approve ? L("On", "켜짐") : L("Off", "꺼짐")}`,
+        `${L("Auth mode", "인증 모드")}: ${project.auth_mode === "api_key" ? L("API Key", "API 키") : L("Subscription", "구독")}`,
         `${L("Last activity", "마지막 활동")}: ${lastActivity}`,
       ].join("\n"),
       inline: false,
