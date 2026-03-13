@@ -5,18 +5,98 @@ import {
   ButtonStyle,
   StringSelectMenuBuilder,
 } from "discord.js";
+import wcwidth from "wcwidth";
 import { L } from "../utils/i18n.js";
 
 const MAX_DISCORD_LENGTH = 1900; // leave room for formatting
 
+/**
+ * Convert markdown tables to Unicode box-drawing tables wrapped in code blocks,
+ * since Discord does not render markdown table syntax natively.
+ *
+ * Example input:
+ *   | Name | Status |
+ *   |------|--------|
+ *   | foo  | 🟢     |
+ *
+ * Example output:
+ *   ```
+ *   ┌──────┬────────┐
+ *   │ Name │ Status │
+ *   ├──────┼────────┤
+ *   │ foo  │ 🟢     │
+ *   └──────┴────────┘
+ *   ```
+ */
+export function convertMarkdownTables(text: string): string {
+  // Match a full markdown table: header row + separator row + one or more data rows.
+  // Each row starts with | and ends with | (possibly with trailing whitespace).
+  const tableRegex = /(?:^\|.+\|\s*\n)(?:^\|[\s|:=-]+\|\s*\n)(?:^\|.+\|\s*\n)*/gm;
+
+  return text.replace(tableRegex, (tableStr) => {
+    const lines = tableStr.trimEnd().split("\n");
+
+    // Parse pipe-separated cells, trimming surrounding whitespace.
+    const parseCells = (line: string): string[] =>
+      line.split("|").slice(1, -1).map((cell) => cell.trim());
+
+    const allRows = lines.map(parseCells);
+    const colCount = Math.max(...allRows.map((r) => r.length));
+
+    // Pad every row to the same column count.
+    const normalizedRows = allRows.map((row) => {
+      const padded = [...row];
+      while (padded.length < colCount) padded.push("");
+      return padded;
+    });
+
+    const headerRow = normalizedRows[0];
+    // normalizedRows[1] is the separator row — skip it.
+    const dataRows = normalizedRows.slice(2);
+
+    // Calculate the display width for each column using wcwidth, which correctly
+    // accounts for double-width characters (CJK, emoji, etc.).
+    const displayWidth = (s: string): number => Math.max(0, wcwidth(s));
+
+    const colWidths: number[] = Array.from({ length: colCount }, (_, c) => {
+      const cellWidths = [headerRow[c], ...dataRows.map((r) => r[c])].map(
+        (s) => displayWidth(s ?? ""),
+      );
+      return Math.max(1, ...cellWidths);
+    });
+
+    // Pad to visual width: account for double-width chars taking up extra space.
+    const pad = (s: string, w: number) =>
+      s + " ".repeat(Math.max(0, w - displayWidth(s)));
+
+    const top = "┌" + colWidths.map((w) => "─".repeat(w + 2)).join("┬") + "┐";
+    const mid = "├" + colWidths.map((w) => "─".repeat(w + 2)).join("┼") + "┤";
+    const bot = "└" + colWidths.map((w) => "─".repeat(w + 2)).join("┴") + "┘";
+
+    const fmtRow = (cells: string[]) =>
+      "│" + cells.map((c, i) => ` ${pad(c, colWidths[i])} `).join("│") + "│";
+
+    const tableLines = [
+      top,
+      fmtRow(headerRow),
+      mid,
+      ...dataRows.map(fmtRow),
+      bot,
+    ];
+
+    return "```\n" + tableLines.join("\n") + "\n```\n";
+  });
+}
+
 export function formatStreamChunk(text: string): string {
-  if (text.length <= MAX_DISCORD_LENGTH) return text;
-  return text.slice(0, MAX_DISCORD_LENGTH) + "\n" + L("... (truncated)", "... (잘림)");
+  const converted = convertMarkdownTables(text);
+  if (converted.length <= MAX_DISCORD_LENGTH) return converted;
+  return converted.slice(0, MAX_DISCORD_LENGTH) + "\n" + L("... (truncated)", "... (잘림)");
 }
 
 export function splitMessage(text: string): string[] {
   const chunks: string[] = [];
-  let remaining = text;
+  let remaining = convertMarkdownTables(text);
 
   while (remaining.length > 0) {
     if (remaining.length <= MAX_DISCORD_LENGTH) {
