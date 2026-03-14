@@ -27,6 +27,12 @@ export const data = new SlashCommandBuilder()
       .setRequired(true)
       .setAutocomplete(true),
   )
+  .addStringOption((opt) =>
+    opt
+      .setName("name")
+      .setDescription(L("Channel name (defaults to project folder name)", "채널 이름 (기본값: 프로젝트 폴더명)"))
+      .setRequired(false),
+  )
   .addChannelOption((opt) =>
     opt
       .setName("category")
@@ -81,8 +87,11 @@ export async function execute(
     return;
   }
 
-  // Derive channel name from folder name
-  const channelName = path.basename(projectPath).toLowerCase().replace(/[^a-z0-9-]/g, "-");
+  // Derive channel name from folder name, or use the provided name
+  const nameInput = interaction.options.getString("name");
+  const channelName = (nameInput ?? path.basename(projectPath))
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-");
 
   // Create Discord channel
   const category = interaction.options.getChannel("category");
