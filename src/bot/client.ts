@@ -14,7 +14,6 @@ import { isAllowedUser } from "../security/guard.js";
 import { L } from "../utils/i18n.js";
 
 // Import commands
-import * as registerCmd from "./commands/register.js";
 import * as unregisterCmd from "./commands/unregister.js";
 import * as statusCmd from "./commands/status.js";
 import * as stopCmd from "./commands/stop.js";
@@ -27,7 +26,7 @@ import * as initCmd from "./commands/init.js";
 import * as authModeCmd from "./commands/auth-mode.js";
 import * as newSessionCmd from "./commands/new-session.js";
 
-const commands = [registerCmd, unregisterCmd, statusCmd, stopCmd, autoApproveCmd, sessionsCmd, clearSessionsCmd, lastCmd, queueCmd, initCmd, authModeCmd, newSessionCmd];
+const commands = [unregisterCmd, statusCmd, stopCmd, autoApproveCmd, sessionsCmd, clearSessionsCmd, lastCmd, queueCmd, initCmd, authModeCmd, newSessionCmd];
 const commandMap = new Collection<
   string,
   { execute: (interaction: ChatInputCommandInteraction) => Promise<void> }

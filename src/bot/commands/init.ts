@@ -13,7 +13,7 @@ import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
 
 export const data = new SlashCommandBuilder()
-  .setName("init")
+  .setName("register")
   .setDescription(
     L(
       "Create a new channel and register it to a project directory",

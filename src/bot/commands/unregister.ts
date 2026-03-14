@@ -2,6 +2,7 @@ import {
   ChatInputCommandInteraction,
   SlashCommandBuilder,
   PermissionFlagsBits,
+  GuildChannel,
 } from "discord.js";
 import { unregisterProject, getProject } from "../../db/database.js";
 import { sessionManager } from "../../claude/session-manager.js";
@@ -9,7 +10,7 @@ import { L } from "../../utils/i18n.js";
 
 export const data = new SlashCommandBuilder()
   .setName("unregister")
-  .setDescription("Unregister this channel from its project")
+  .setDescription("Unregister this channel from its project and delete the channel")
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(
@@ -30,13 +31,23 @@ export async function execute(
 
   unregisterProject(channelId);
 
+  // Reply first — interaction webhooks work even after the channel is deleted
   await interaction.editReply({
     embeds: [
       {
         title: L("Project Unregistered", "프로젝트 등록 해제됨"),
-        description: L(`Removed link to \`${project.project_path}\``, `\`${project.project_path}\` 연결이 해제되었습니다`),
+        description: L(
+          `Removed link to \`${project.project_path}\`. Deleting channel...`,
+          `\`${project.project_path}\` 연결이 해제되었습니다. 채널을 삭제합니다...`,
+        ),
         color: 0xff0000,
       },
     ],
   });
+
+  // Delete the channel
+  const channel = interaction.channel;
+  if (channel instanceof GuildChannel) {
+    await channel.delete(`Unregistered project: ${project.project_path}`);
+  }
 }
