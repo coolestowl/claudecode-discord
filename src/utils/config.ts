@@ -48,3 +48,24 @@ export function getConfig(): Config {
   if (!_config) return loadConfig();
   return _config;
 }
+
+// Collect available models for API key mode from the API key env vars.
+// Returns unique non-empty values found across all model-related env vars.
+export function getApiKeyModels(): { name: string; value: string }[] {
+  const keys = [
+    "ANTHROPIC_MODEL",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL",
+    "ANTHROPIC_SMALL_FAST_MODEL",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+  ];
+  const seen = new Set<string>();
+  const models: { name: string; value: string }[] = [];
+  for (const key of keys) {
+    const value = process.env[key]?.trim();
+    if (value && !seen.has(value)) {
+      seen.add(value);
+      models.push({ name: value, value });
+    }
+  }
+  return models;
+}
