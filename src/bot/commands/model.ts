@@ -4,7 +4,7 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { getProject, setModel } from "../../db/database.js";
-import { getConfig, getApiKeyModels } from "../../utils/config.js";
+import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
 
 export const data = new SlashCommandBuilder()
@@ -18,19 +18,11 @@ export const data = new SlashCommandBuilder()
       .setAutocomplete(true),
   );
 
-function getModelsForChannel(channelId: string): { name: string; value: string }[] {
-  const project = getProject(channelId);
-  if (project?.auth_mode === "api_key") {
-    return getApiKeyModels();
-  }
-  return getConfig().AVAILABLE_MODELS;
-}
-
 export async function autocomplete(
   interaction: AutocompleteInteraction,
 ): Promise<void> {
   const focused = interaction.options.getFocused();
-  const models = getModelsForChannel(interaction.channelId);
+  const models = getConfig().AVAILABLE_MODELS;
 
   const choices = models
     .filter((m) => m.name.toLowerCase().includes(focused.toLowerCase()) || m.value.toLowerCase().includes(focused.toLowerCase()))
@@ -56,8 +48,18 @@ export async function execute(
     return;
   }
 
-  // Validate against the mode-specific model list
-  const models = getModelsForChannel(channelId);
+  if (project.auth_mode === "api_key") {
+    await interaction.editReply({
+      content: L(
+        "Model selection is only available in subscription mode. Switch with `/auth-mode` first.",
+        "모델 선택은 구독 모드에서만 사용할 수 있습니다. 먼저 `/auth-mode`로 전환하세요.",
+      ),
+    });
+    return;
+  }
+
+  // Validate against available models
+  const models = getConfig().AVAILABLE_MODELS;
   if (models.length > 0 && !models.some((m) => m.value === model)) {
     await interaction.editReply({
       content: L(
