@@ -249,9 +249,11 @@ class SessionManager {
               return { behavior: "allow" as const, updatedInput: input };
             }
 
-            // Check auto-approve setting
+            // Check auto-approve setting — notify Discord but skip approval prompt
             const currentProject = getProject(channelId);
             if (currentProject?.auto_approve) {
+              const { embed } = createToolApprovalEmbed(toolName, input, "auto", true);
+              await channel.send({ embeds: [embed] }).catch(() => {});
               return { behavior: "allow" as const, updatedInput: input };
             }
 

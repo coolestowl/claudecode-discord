@@ -168,10 +168,15 @@ export function createToolApprovalEmbed(
   toolName: string,
   input: Record<string, unknown>,
   requestId: string,
+  autoApproved = false,
 ): { embed: EmbedBuilder; row: ActionRowBuilder<ButtonBuilder> } {
   const embed = new EmbedBuilder()
-    .setTitle(L(`🔧 Tool Use: ${toolName}`, `🔧 도구 사용: ${toolName}`))
-    .setColor(0xffa500)
+    .setTitle(
+      autoApproved
+        ? L(`✅ Auto: ${toolName}`, `✅ 자동 승인: ${toolName}`)
+        : L(`🔧 Tool Use: ${toolName}`, `🔧 도구 사용: ${toolName}`),
+    )
+    .setColor(autoApproved ? 0x00cc66 : 0xffa500)
     .setTimestamp();
 
   // Add relevant fields based on tool type
