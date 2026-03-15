@@ -53,14 +53,15 @@ export async function startBot(): Promise<Client> {
     console.log(`Bot logged in as ${client.user?.tag}`);
     try {
       const rest = new REST({ version: "10" }).setToken(config.DISCORD_BOT_TOKEN);
+      const appId = (await rest.get(Routes.currentApplication()) as { id: string }).id;
+      const route = Routes.applicationGuildCommands(appId, config.DISCORD_GUILD_ID);
+
+      // Clear all existing commands first, then re-register
+      await rest.put(route, { body: [] });
+      console.log("Cleared existing slash commands");
+
       const commandData = commands.map((c) => c.data.toJSON());
-      await rest.put(
-        Routes.applicationGuildCommands(
-          (await rest.get(Routes.currentApplication()) as { id: string }).id,
-          config.DISCORD_GUILD_ID,
-        ),
-        { body: commandData },
-      );
+      await rest.put(route, { body: commandData });
       console.log(`Registered ${commandData.length} slash commands`);
     } catch (error) {
       console.error("Failed to register slash commands:", error);
