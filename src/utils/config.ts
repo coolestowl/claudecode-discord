@@ -13,6 +13,15 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((v) => v === "true"),
+  AVAILABLE_MODELS: z
+    .string()
+    .default("sonnet:claude-sonnet-4-5-20250929,opus:claude-opus-4-20250514,haiku:claude-haiku-4-5-20251001")
+    .transform((v) =>
+      v.split(",").map((entry) => {
+        const [name, value] = entry.trim().split(":");
+        return { name: name.trim(), value: value?.trim() ?? name.trim() };
+      }),
+    ),
 });
 
 export type Config = z.infer<typeof envSchema>;

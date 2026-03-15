@@ -60,10 +60,14 @@ const API_KEY_ENV_VARS = [
   "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
 ] as const;
 
-function buildEnv(authMode: string): Record<string, string | undefined> | undefined {
+function buildEnv(authMode: string, model?: string | null): Record<string, string | undefined> | undefined {
   if (authMode === "api_key") {
     // Pass full process.env so the subprocess has all necessary context
-    return { ...process.env };
+    const env = { ...process.env };
+    if (model) {
+      env.ANTHROPIC_MODEL = model;
+    }
+    return env;
   }
   // subscription mode: strip API-key vars so Claude uses its own login
   const env = { ...process.env };
@@ -135,8 +139,9 @@ class SessionManager {
         options: {
           cwd: project.project_path,
           permissionMode: "default",
-          env: buildEnv(project.auth_mode ?? "subscription"),
+          env: buildEnv(project.auth_mode ?? "subscription", project.model),
           ...(resumeSessionId ? { resume: resumeSessionId } : {}),
+          ...(project.model ? { model: project.model } : {}),
 
           canUseTool: async (
             toolName: string,
