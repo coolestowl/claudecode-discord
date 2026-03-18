@@ -4,9 +4,13 @@ import {
   PermissionFlagsBits,
   GuildChannel,
 } from "discord.js";
+import { execFile as execFileCb } from "node:child_process";
+import { promisify } from "node:util";
 import { unregisterProject, getProject } from "../../db/database.js";
 import { sessionManager } from "../../claude/session-manager.js";
 import { L } from "../../utils/i18n.js";
+
+const execFile = promisify(execFileCb);
 
 export const data = new SlashCommandBuilder()
   .setName("unregister")
@@ -49,5 +53,12 @@ export async function execute(
   const channel = interaction.channel;
   if (channel instanceof GuildChannel) {
     await channel.delete(`Unregistered project: ${project.project_path}`);
+  }
+
+  // Delete the Coder workspace if one is associated (fire-and-forget, don't block reply)
+  if (project.workspace_name) {
+    execFile("coder", ["delete", project.workspace_name, "--yes"])
+      .then(() => console.log(`[unregister] Deleted Coder workspace: ${project.workspace_name}`))
+      .catch((e) => console.error(`[unregister] Failed to delete workspace ${project.workspace_name}: ${e.message}`));
   }
 }

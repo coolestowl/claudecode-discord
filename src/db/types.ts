@@ -9,6 +9,7 @@ export interface Project {
   auto_approve: number; // 0 or 1
   auth_mode: AuthMode;
   model: string | null;
+  workspace_name: string | null; // Coder workspace name; null = local
   created_at: string;
 }
 

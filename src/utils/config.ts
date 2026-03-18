@@ -22,6 +22,9 @@ const envSchema = z.object({
         return { name: name.trim(), value: value?.trim() ?? name.trim() };
       }),
     ),
+  // Coder workspace integration
+  CODER_REMOTE_HOME: z.string().default("/home/coder"),
+  CODER_SSH_SUFFIX: z.string().default(".coder"),
 });
 
 export type Config = z.infer<typeof envSchema>;

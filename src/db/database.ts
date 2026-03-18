@@ -39,6 +39,9 @@ export function initDatabase(): void {
   if (!cols.some((c) => c.name === "model")) {
     db.exec("ALTER TABLE projects ADD COLUMN model TEXT DEFAULT NULL");
   }
+  if (!cols.some((c) => c.name === "workspace_name")) {
+    db.exec("ALTER TABLE projects ADD COLUMN workspace_name TEXT DEFAULT NULL");
+  }
 }
 
 export function getDb(): Database.Database {
@@ -95,6 +98,13 @@ export function setAuthMode(channelId: string, mode: AuthMode): void {
 export function setModel(channelId: string, model: string | null): void {
   db.prepare("UPDATE projects SET model = ? WHERE channel_id = ?").run(
     model,
+    channelId,
+  );
+}
+
+export function setWorkspaceName(channelId: string, workspaceName: string | null): void {
+  db.prepare("UPDATE projects SET workspace_name = ? WHERE channel_id = ?").run(
+    workspaceName,
     channelId,
   );
 }
