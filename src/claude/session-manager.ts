@@ -1,4 +1,5 @@
 import { query, type Query } from "@anthropic-ai/claude-agent-sdk";
+import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import type { TextChannel } from "discord.js";
 import {
@@ -60,6 +61,11 @@ const API_KEY_ENV_VARS = [
   "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
 ] as const;
 
+/** Wrap a string in single quotes, escaping any embedded single quotes. */
+function singleQuote(s: string): string {
+  return "'" + s.replace(/'/g, "'\\''") + "'";
+}
+
 function buildEnv(authMode: string, model?: string | null): Record<string, string | undefined> | undefined {
   if (authMode === "api_key") {
     // Pass full process.env so the subprocess has all necessary context
@@ -67,6 +73,7 @@ function buildEnv(authMode: string, model?: string | null): Record<string, strin
     if (model) {
       env.ANTHROPIC_MODEL = model;
     }
+    env.ENABLE_TOOL_SEARCH = "true";
     return env;
   }
   // subscription mode: strip API-key vars so Claude uses its own login
@@ -134,6 +141,39 @@ class SessionManager {
     }, 15_000);
 
     try {
+      const config = getConfig();
+
+      // Build spawnClaudeCodeProcess for remote Coder workspaces
+      const spawnViaSSH = project.workspace_name
+        ? (({ command, args, cwd }: { command: string; args: string[]; cwd?: string; env: Record<string, string | undefined>; signal: AbortSignal }) => {
+            const sshHost = `${project.workspace_name}${config.CODER_SSH_SUFFIX}`;
+
+            // Only forward the vars Claude Code actually needs.
+            // Subscription mode: Claude on the remote uses its own login — pass nothing.
+            // API key mode: forward only the Anthropic-specific vars that are set.
+            const remoteEnv: Record<string, string> = {};
+            if ((project.auth_mode ?? "subscription") === "api_key") {
+              for (const key of API_KEY_ENV_VARS) {
+                const val = process.env[key];
+                if (val) remoteEnv[key] = val;
+              }
+              if (project.model) remoteEnv.ANTHROPIC_MODEL = project.model;
+              remoteEnv.ENABLE_TOOL_SEARCH = "true";
+            }
+
+            const envStr = Object.entries(remoteEnv)
+              .map(([k, v]) => `${k}=${singleQuote(v)}`)
+              .join(" ");
+            const remoteCmd = `cd ${singleQuote(cwd ?? config.CODER_REMOTE_HOME)} && ${envStr ? `env ${envStr} ` : ""}${command} ${args.map(singleQuote).join(" ")}`;
+            return spawn("ssh", [
+              "-o", "StrictHostKeyChecking=no",
+              "-o", "BatchMode=yes",
+              sshHost,
+              "/bin/sh", "-c", remoteCmd,
+            ], { stdio: ["pipe", "pipe", "pipe"] });
+          })
+        : undefined;
+
       const queryInstance = query({
         prompt,
         options: {
@@ -142,6 +182,7 @@ class SessionManager {
           env: buildEnv(project.auth_mode ?? "subscription", project.model),
           ...(resumeSessionId ? { resume: resumeSessionId } : {}),
           ...(project.model ? { model: project.model } : {}),
+          ...(spawnViaSSH ? { spawnClaudeCodeProcess: spawnViaSSH } : {}),
 
           canUseTool: async (
             toolName: string,
