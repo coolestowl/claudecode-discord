@@ -1,8 +1,6 @@
 import {
   Client,
   GatewayIntentBits,
-  REST,
-  Routes,
   Collection,
   type ChatInputCommandInteraction,
   type Interaction,
@@ -54,27 +52,34 @@ export async function startBot(): Promise<Client> {
   client.on("ready", async () => {
     console.log(`Bot logged in as ${client.user?.tag}`);
     try {
-      const rest = new REST({ version: "10" }).setToken(config.DISCORD_BOT_TOKEN);
       const TIMEOUT_MS = 15_000;
+      const token = config.DISCORD_BOT_TOKEN;
 
-      const register = async () => {
-        console.log("[register] Fetching application ID...");
-        const appId = (await rest.get(Routes.currentApplication()) as { id: string }).id;
-        console.log(`[register] App ID: ${appId}`);
+      // Fetch app ID via plain fetch — bypasses @discordjs/rest internal queue
+      console.log("[register] Fetching application ID...");
+      const meRes = await fetch("https://discord.com/api/v10/applications/@me", {
+        headers: { Authorization: `Bot ${token}` },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (!meRes.ok) throw new Error(`GET /applications/@me → HTTP ${meRes.status}: ${await meRes.text()}`);
+      const { id: appId } = await meRes.json() as { id: string };
+      console.log(`[register] App ID: ${appId}`);
 
-        const route = Routes.applicationGuildCommands(appId, config.DISCORD_GUILD_ID);
-        const commandData = commands.map((c) => c.data.toJSON());
+      const commandData = commands.map((c) => c.data.toJSON());
+      console.log(`[register] Registering ${commandData.length} slash commands to guild ${config.DISCORD_GUILD_ID}...`);
 
-        console.log(`[register] Registering ${commandData.length} slash commands to guild ${config.DISCORD_GUILD_ID}...`);
-        await rest.put(route, { body: commandData });
-        console.log(`[register] Done — ${commandData.length} slash commands registered.`);
-      };
-
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`Timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS),
+      const putRes = await fetch(
+        `https://discord.com/api/v10/applications/${appId}/guilds/${config.DISCORD_GUILD_ID}/commands`,
+        {
+          method: "PUT",
+          headers: { Authorization: `Bot ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(commandData),
+          signal: AbortSignal.timeout(TIMEOUT_MS),
+        },
       );
+      if (!putRes.ok) throw new Error(`PUT /guilds/.../commands → HTTP ${putRes.status}: ${await putRes.text()}`);
 
-      await Promise.race([register(), timeout]);
+      console.log(`[register] Done — ${commandData.length} slash commands registered.`);
     } catch (error) {
       console.error("[register] Failed to register slash commands:", error);
     }
