@@ -25,6 +25,9 @@ const envSchema = z.object({
   // Coder workspace integration
   CODER_REMOTE_HOME: z.string().default("/home/coder"),
   CODER_SSH_SUFFIX: z.string().default(".coder"),
+  // Comma-separated key=value pairs forwarded as a single --parameter to `coder create`
+  // e.g. "region=us-east-1,size=large"
+  CODER_CREATE_PARAMETERS: z.string().optional(),
 });
 
 export type Config = z.infer<typeof envSchema>;

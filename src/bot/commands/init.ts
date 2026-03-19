@@ -32,7 +32,8 @@ export const data = new SlashCommandBuilder()
     opt
       .setName("template")
       .setDescription("Coder template to use for the workspace")
-      .setRequired(true),
+      .setRequired(true)
+      .setAutocomplete(true),
   )
   .addChannelOption((opt) =>
     opt
@@ -78,9 +79,12 @@ export async function execute(
 
   try {
     // 1. Create Coder workspace
+    const paramArgs = config.CODER_CREATE_PARAMETERS
+      ? ["--parameter", config.CODER_CREATE_PARAMETERS]
+      : [];
     const { stdout, stderr } = await execFile(
       "coder",
-      ["create", workspaceName, "--template", template, "--yes"],
+      ["create", workspaceName, "--template", template, "--yes", ...paramArgs],
       { timeout: 5 * 60 * 1000 },
     );
     if (stdout) console.log(`[coder create] ${stdout}`);
@@ -166,10 +170,10 @@ export async function autocomplete(
     const { stdout } = await execFile("coder", ["templates", "list", "--output", "json"], {
       timeout: 10_000,
     });
-    const templates = JSON.parse(stdout) as { template: { name: string; display_name?: string } }[];
+    const templates = JSON.parse(stdout) as { Template: { name: string; display_name?: string } }[];
     const query = focused.value.toLowerCase();
     const choices = templates
-      .map((t) => t.template)
+      .map((t) => t.Template)
       .filter((t) => t.name.toLowerCase().includes(query) || (t.display_name ?? "").toLowerCase().includes(query))
       .slice(0, 25)
       .map((t) => ({ name: t.display_name ? `${t.display_name} (${t.name})` : t.name, value: t.name }));

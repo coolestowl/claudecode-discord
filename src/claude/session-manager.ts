@@ -61,6 +61,11 @@ const API_KEY_ENV_VARS = [
   "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
 ] as const;
 
+// Additional vars to strip in subscription mode so Claude uses its own OAuth login
+const SUBSCRIPTION_STRIP_VARS = [
+  "ANTHROPIC_API_KEY",
+] as const;
+
 /** Wrap a string in single quotes, escaping any embedded single quotes. */
 function singleQuote(s: string): string {
   return "'" + s.replace(/'/g, "'\\''") + "'";
@@ -79,6 +84,9 @@ function buildEnv(authMode: string, model?: string | null): Record<string, strin
   // subscription mode: strip API-key vars so Claude uses its own login
   const env = { ...process.env };
   for (const key of API_KEY_ENV_VARS) {
+    delete env[key];
+  }
+  for (const key of SUBSCRIPTION_STRIP_VARS) {
     delete env[key];
   }
   return env;
