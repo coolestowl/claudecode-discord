@@ -27,7 +27,7 @@ import {
   s_duration,
   s_taskCompleteEmoji,
   s_taskCompleteTitle,
-} from "../../i18n/strings.js";
+} from "../i18n/strings.js";
 
 const MAX_DISCORD_LENGTH = 1900; // leave room for formatting
 

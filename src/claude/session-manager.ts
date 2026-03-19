@@ -27,7 +27,7 @@ import {
   s_taskCompleted,
   s_processingQueued,
   s_processingQueuedNoCount,
-} from "../../i18n/strings.js";
+} from "../i18n/strings.js";
 import {
   createToolApprovalEmbed,
   createAskUserQuestionEmbed,
