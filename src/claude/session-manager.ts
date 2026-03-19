@@ -170,6 +170,7 @@ class SessionManager {
                 if (val) remoteEnv[key] = val;
               }
               if (project.model) remoteEnv.ANTHROPIC_MODEL = project.model;
+            } else {
               remoteEnv.ENABLE_TOOL_SEARCH = "true";
             }
 
