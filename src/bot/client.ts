@@ -54,18 +54,27 @@ export async function startBot(): Promise<Client> {
   client.on("ready", async () => {
     console.log(`Bot logged in as ${client.user?.tag}`);
     try {
-      const rest = new REST({ version: "10", timeout: 15_000 }).setToken(config.DISCORD_BOT_TOKEN);
+      const rest = new REST({ version: "10" }).setToken(config.DISCORD_BOT_TOKEN);
+      const TIMEOUT_MS = 15_000;
 
-      console.log("[register] Fetching application ID...");
-      const appId = (await rest.get(Routes.currentApplication()) as { id: string }).id;
-      console.log(`[register] App ID: ${appId}`);
+      const register = async () => {
+        console.log("[register] Fetching application ID...");
+        const appId = (await rest.get(Routes.currentApplication()) as { id: string }).id;
+        console.log(`[register] App ID: ${appId}`);
 
-      const route = Routes.applicationGuildCommands(appId, config.DISCORD_GUILD_ID);
-      const commandData = commands.map((c) => c.data.toJSON());
+        const route = Routes.applicationGuildCommands(appId, config.DISCORD_GUILD_ID);
+        const commandData = commands.map((c) => c.data.toJSON());
 
-      console.log(`[register] Registering ${commandData.length} slash commands to guild ${config.DISCORD_GUILD_ID}...`);
-      await rest.put(route, { body: commandData });
-      console.log(`[register] Done — ${commandData.length} slash commands registered.`);
+        console.log(`[register] Registering ${commandData.length} slash commands to guild ${config.DISCORD_GUILD_ID}...`);
+        await rest.put(route, { body: commandData });
+        console.log(`[register] Done — ${commandData.length} slash commands registered.`);
+      };
+
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS),
+      );
+
+      await Promise.race([register(), timeout]);
     } catch (error) {
       console.error("[register] Failed to register slash commands:", error);
     }
