@@ -15,6 +15,17 @@ const execFile = promisify(execFileCb);
 export const data = new SlashCommandBuilder()
   .setName("unregister")
   .setDescription("Unregister this channel from its project and delete the channel")
+  .addBooleanOption((opt) =>
+    opt
+      .setName("delete-workspace")
+      .setDescription(
+        L(
+          "Also delete the Coder workspace (default: false)",
+          "Coder 워크스페이스도 함께 삭제합니다 (기본값: false)",
+        ),
+      )
+      .setRequired(false),
+  )
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(
@@ -22,6 +33,7 @@ export async function execute(
 ): Promise<void> {
   const channelId = interaction.channelId;
   const project = getProject(channelId);
+  const deleteWorkspace = interaction.options.getBoolean("delete-workspace") ?? false;
 
   if (!project) {
     await interaction.editReply({
@@ -35,14 +47,20 @@ export async function execute(
 
   unregisterProject(channelId);
 
+  const workspaceNote = deleteWorkspace && project.workspace_name
+    ? L(" Deleting Coder workspace too...", " Coder 워크스페이스도 삭제합니다...")
+    : project.workspace_name
+      ? L(` Coder workspace \`${project.workspace_name}\` was kept.`, ` Coder 워크스페이스 \`${project.workspace_name}\`는 유지됩니다.`)
+      : "";
+
   // Reply first — interaction webhooks work even after the channel is deleted
   await interaction.editReply({
     embeds: [
       {
         title: L("Project Unregistered", "프로젝트 등록 해제됨"),
         description: L(
-          `Removed link to \`${project.project_path}\`. Deleting channel...`,
-          `\`${project.project_path}\` 연결이 해제되었습니다. 채널을 삭제합니다...`,
+          `Removed link to \`${project.project_path}\`. Deleting channel...${workspaceNote}`,
+          `\`${project.project_path}\` 연결이 해제되었습니다. 채널을 삭제합니다...${workspaceNote}`,
         ),
         color: 0xff0000,
       },
@@ -55,8 +73,8 @@ export async function execute(
     await channel.delete(`Unregistered project: ${project.project_path}`);
   }
 
-  // Delete the Coder workspace if one is associated (fire-and-forget, don't block reply)
-  if (project.workspace_name) {
+  // Delete the Coder workspace only if explicitly requested
+  if (deleteWorkspace && project.workspace_name) {
     execFile("coder", ["delete", project.workspace_name, "--yes"])
       .then(() => console.log(`[unregister] Deleted Coder workspace: ${project.workspace_name}`))
       .catch((e) => console.error(`[unregister] Failed to delete workspace ${project.workspace_name}: ${e.message}`));

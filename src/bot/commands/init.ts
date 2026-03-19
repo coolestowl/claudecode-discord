@@ -31,8 +31,8 @@ export const data = new SlashCommandBuilder()
   .addStringOption((opt) =>
     opt
       .setName("template")
-      .setDescription("Coder template to use for the workspace")
-      .setRequired(true)
+      .setDescription("Coder template to use (required only when creating a new workspace)")
+      .setRequired(false)
       .setAutocomplete(true),
   )
   .addChannelOption((opt) =>
@@ -49,7 +49,7 @@ export async function execute(
 ): Promise<void> {
   const config = getConfig();
   const nameInput = interaction.options.getString("name", true);
-  const template = interaction.options.getString("template", true);
+  const template = interaction.options.getString("template");
   const guildId = interaction.guildId!;
   const guild = interaction.guild!;
 
@@ -69,37 +69,67 @@ export async function execute(
   const remotePath = config.CODER_REMOTE_HOME;
   const sshHost = `${workspaceName}${config.CODER_SSH_SUFFIX}`;
 
-  // Inform the user that workspace creation may take a moment
-  await interaction.editReply({
-    content: L(`⏳ Creating Coder workspace \`${workspaceName}\`...`, `⏳ Coder 워크스페이스 \`${workspaceName}\` 생성 중...`),
-  });
+  // Check if workspace already exists
+  let workspaceExists = false;
+  try {
+    await execFile("coder", ["show", workspaceName], { timeout: 30_000 });
+    workspaceExists = true;
+  } catch {
+    workspaceExists = false;
+  }
+
+  // If workspace does not exist, template is required
+  if (!workspaceExists && !template) {
+    await interaction.editReply({
+      content: L(
+        "❌ Template is required when creating a new workspace. Please provide the `template` option.",
+        "❌ 새 워크스페이스 생성 시 템플릿이 필요합니다. `template` 옵션을 지정해 주세요.",
+      ),
+    });
+    return;
+  }
 
   let workspaceCreated = false;
   let newChannel: TextChannel | null = null;
 
   try {
-    // 1. Create Coder workspace
-    const paramArgs = config.CODER_CREATE_PARAMETERS
-      ? ["--parameter", config.CODER_CREATE_PARAMETERS]
-      : [];
-    const { stdout, stderr } = await execFile(
-      "coder",
-      ["create", workspaceName, "--template", template, "--yes", ...paramArgs],
-      { timeout: 5 * 60 * 1000 },
-    );
-    if (stdout) console.log(`[coder create] ${stdout}`);
-    if (stderr) console.log(`[coder create stderr] ${stderr}`);
-    workspaceCreated = true;
+    if (workspaceExists) {
+      // Workspace already exists — skip creation and wait
+      await interaction.editReply({
+        content: L(
+          `ℹ️ Workspace \`${workspaceName}\` already exists. Creating Discord channel...`,
+          `ℹ️ 워크스페이스 \`${workspaceName}\`가 이미 존재합니다. Discord 채널 생성 중...`,
+        ),
+      });
+    } else {
+      // Inform the user that workspace creation may take a moment
+      await interaction.editReply({
+        content: L(`⏳ Creating Coder workspace \`${workspaceName}\`...`, `⏳ Coder 워크스페이스 \`${workspaceName}\` 생성 중...`),
+      });
 
-    // 2. Notify Discord that workspace is created, waiting for initialization
-    await interaction.editReply({
-      content: L(
-        `✅ Workspace \`${workspaceName}\` created. Waiting 2 minutes for initialization...`,
-        `✅ 워크스페이스 \`${workspaceName}\` 생성 완료. 초기화 대기 중 (2분)...`,
-      ),
-    });
+      // 1. Create Coder workspace
+      const paramArgs = config.CODER_CREATE_PARAMETERS
+        ? ["--parameter", config.CODER_CREATE_PARAMETERS]
+        : [];
+      const { stdout, stderr } = await execFile(
+        "coder",
+        ["create", workspaceName, "--template", template!, "--yes", ...paramArgs],
+        { timeout: 5 * 60 * 1000 },
+      );
+      if (stdout) console.log(`[coder create] ${stdout}`);
+      if (stderr) console.log(`[coder create stderr] ${stderr}`);
+      workspaceCreated = true;
 
-    await new Promise((r) => setTimeout(r, 2 * 60 * 1000));
+      // 2. Notify Discord that workspace is created, waiting for initialization
+      await interaction.editReply({
+        content: L(
+          `✅ Workspace \`${workspaceName}\` created. Waiting 2 minutes for initialization...`,
+          `✅ 워크스페이스 \`${workspaceName}\` 생성 완료. 초기화 대기 중 (2분)...`,
+        ),
+      });
+
+      await new Promise((r) => setTimeout(r, 2 * 60 * 1000));
+    }
 
     // 3. Create Discord channel
     const category = interaction.options.getChannel("category");
@@ -112,7 +142,7 @@ export async function execute(
       ...(category ? { parent: category.id } : {}),
     }) as TextChannel;
 
-    // 5. Register in database
+    // 4. Register in database
     registerProject(newChannel.id, remotePath, guildId);
     setWorkspaceName(newChannel.id, workspaceName);
 
@@ -121,10 +151,15 @@ export async function execute(
       embeds: [
         {
           title: L("✅ Workspace Registered", "✅ 워크스페이스 등록됨"),
-          description: L(
-            `Created Coder workspace \`${workspaceName}\` and linked to <#${newChannel.id}>.`,
-            `Coder 워크스페이스 \`${workspaceName}\`를 생성하고 <#${newChannel.id}>에 연결했습니다.`,
-          ),
+          description: workspaceExists
+            ? L(
+                `Linked existing Coder workspace \`${workspaceName}\` to <#${newChannel.id}>.`,
+                `기존 Coder 워크스페이스 \`${workspaceName}\`를 <#${newChannel.id}>에 연결했습니다.`,
+              )
+            : L(
+                `Created Coder workspace \`${workspaceName}\` and linked to <#${newChannel.id}>.`,
+                `Coder 워크스페이스 \`${workspaceName}\`를 생성하고 <#${newChannel.id}>에 연결했습니다.`,
+              ),
           color: 0x00ff00,
           fields: [
             { name: "Workspace", value: `\`${workspaceName}\``, inline: true },
@@ -139,7 +174,7 @@ export async function execute(
   } catch (err) {
     console.error("[register] Error:", err);
 
-    // Rollback: delete workspace and channel if partially created
+    // Rollback: delete workspace if we just created it, and delete channel if partially created
     if (workspaceCreated) {
       execFile("coder", ["delete", workspaceName, "--yes"]).catch((e) =>
         console.error(`[register] Failed to rollback workspace: ${e.message}`),
