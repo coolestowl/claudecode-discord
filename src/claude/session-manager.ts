@@ -112,6 +112,10 @@ class SessionManager {
     const dbId = existingSession?.dbId ?? dbSession?.id ?? randomUUID();
     const resumeSessionId = existingSession?.sessionId ?? dbSession?.session_id ?? undefined;
 
+    if (!project.workspace_name) {
+      console.log(`[claude] channel=${channelId} prompt=${JSON.stringify(prompt.slice(0, 200))}${prompt.length > 200 ? "…" : ""}`);
+    }
+
     // Update status to online
     upsertSession(dbId, channelId, resumeSessionId ?? null, "online");
 
@@ -175,6 +179,7 @@ class SessionManager {
             // Use absolute path so SSH non-login shells (no .bashrc) can find claude
             const remoteCommand = command === "claude" ? "/home/coder/.local/bin/claude" : command;
             const remoteCmd = `cd ${singleQuote(cwd ?? config.CODER_REMOTE_HOME)} && ${envStr ? `env ${envStr} ` : ""}${remoteCommand} ${args.map(singleQuote).join(" ")}`;
+            console.log(`[claude:ssh] host=${sshHost} cmd=${remoteCmd}`);
             return spawn("ssh", [
               "-o", "StrictHostKeyChecking=no",
               "-o", "BatchMode=yes",
