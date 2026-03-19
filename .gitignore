@@ -11,6 +11,7 @@ dist/
 CLAUDE.md
 .bot.lock
 .tray.pid
+.command-cache.json
 bot.log
 bot-error.log
 menubar/ClaudeBotMenu

@@ -5,11 +5,33 @@ import {
   type ChatInputCommandInteraction,
   type Interaction,
 } from "discord.js";
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { getConfig } from "../utils/config.js";
 import { handleMessage } from "./handlers/message.js";
 import { handleButtonInteraction, handleSelectMenuInteraction } from "./handlers/interaction.js";
 import { isAllowedUser } from "../security/guard.js";
 import { L } from "../utils/i18n.js";
+
+const COMMAND_CACHE_FILE = join(process.cwd(), ".command-cache.json");
+
+function getCommandHash(commandData: unknown[]): string {
+  return createHash("sha256").update(JSON.stringify(commandData)).digest("hex");
+}
+
+function loadCachedHash(): string | null {
+  try {
+    const cache = JSON.parse(readFileSync(COMMAND_CACHE_FILE, "utf8")) as { hash?: string };
+    return cache.hash ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedHash(hash: string): void {
+  writeFileSync(COMMAND_CACHE_FILE, JSON.stringify({ hash }), "utf8");
+}
 
 // Import commands
 import * as unregisterCmd from "./commands/unregister.js";
@@ -54,6 +76,14 @@ export async function startBot(): Promise<Client> {
     try {
       const TIMEOUT_MS = 15_000;
       const token = config.DISCORD_BOT_TOKEN;
+      const commandData = commands.map((c) => c.data.toJSON());
+      const currentHash = getCommandHash(commandData);
+      const cachedHash = loadCachedHash();
+
+      if (currentHash === cachedHash) {
+        console.log("[register] Commands unchanged, skipping registration.");
+        return;
+      }
 
       // Fetch app ID via plain fetch — bypasses @discordjs/rest internal queue
       console.log("[register] Fetching application ID...");
@@ -65,9 +95,7 @@ export async function startBot(): Promise<Client> {
       const { id: appId } = await meRes.json() as { id: string };
       console.log(`[register] App ID: ${appId}`);
 
-      const commandData = commands.map((c) => c.data.toJSON());
       console.log(`[register] Registering ${commandData.length} slash commands to guild ${config.DISCORD_GUILD_ID}...`);
-
       const putRes = await fetch(
         `https://discord.com/api/v10/applications/${appId}/guilds/${config.DISCORD_GUILD_ID}/commands`,
         {
@@ -79,6 +107,7 @@ export async function startBot(): Promise<Client> {
       );
       if (!putRes.ok) throw new Error(`PUT /guilds/.../commands → HTTP ${putRes.status}: ${await putRes.text()}`);
 
+      saveCachedHash(currentHash);
       console.log(`[register] Done — ${commandData.length} slash commands registered.`);
     } catch (error) {
       console.error("[register] Failed to register slash commands:", error);
