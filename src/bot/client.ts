@@ -55,15 +55,19 @@ export async function startBot(): Promise<Client> {
     console.log(`Bot logged in as ${client.user?.tag}`);
     try {
       const rest = new REST({ version: "10", timeout: 15_000 }).setToken(config.DISCORD_BOT_TOKEN);
-      const appId = (await rest.get(Routes.currentApplication()) as { id: string }).id;
-      const route = Routes.applicationGuildCommands(appId, config.DISCORD_GUILD_ID);
 
-      // PUT replaces all guild commands atomically — no need to clear first
+      console.log("[register] Fetching application ID...");
+      const appId = (await rest.get(Routes.currentApplication()) as { id: string }).id;
+      console.log(`[register] App ID: ${appId}`);
+
+      const route = Routes.applicationGuildCommands(appId, config.DISCORD_GUILD_ID);
       const commandData = commands.map((c) => c.data.toJSON());
+
+      console.log(`[register] Registering ${commandData.length} slash commands to guild ${config.DISCORD_GUILD_ID}...`);
       await rest.put(route, { body: commandData });
-      console.log(`Registered ${commandData.length} slash commands`);
+      console.log(`[register] Done — ${commandData.length} slash commands registered.`);
     } catch (error) {
-      console.error("Failed to register slash commands:", error);
+      console.error("[register] Failed to register slash commands:", error);
     }
   });
 
