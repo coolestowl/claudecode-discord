@@ -91,7 +91,17 @@ export async function execute(
     if (stderr) console.log(`[coder create stderr] ${stderr}`);
     workspaceCreated = true;
 
-    // 2. Create remote project directory
+    // 2. Notify Discord that workspace is created, waiting for initialization
+    await interaction.editReply({
+      content: L(
+        `✅ Workspace \`${workspaceName}\` created. Waiting 2 minutes for initialization...`,
+        `✅ 워크스페이스 \`${workspaceName}\` 생성 완료. 초기화 대기 중 (2분)...`,
+      ),
+    });
+
+    await new Promise((r) => setTimeout(r, 2 * 60 * 1000));
+
+    // 3. Create remote project directory
     await execFile("ssh", [
       "-o", "StrictHostKeyChecking=no",
       "-o", "BatchMode=yes",
@@ -99,7 +109,7 @@ export async function execute(
       "mkdir", "-p", remotePath,
     ], { timeout: 30_000 });
 
-    // 3. Create Discord channel
+    // 4. Create Discord channel
     const category = interaction.options.getChannel("category");
     const channelName = workspaceName;
     newChannel = await guild.channels.create({
@@ -110,7 +120,7 @@ export async function execute(
       ...(category ? { parent: category.id } : {}),
     }) as TextChannel;
 
-    // 4. Register in database
+    // 5. Register in database
     registerProject(newChannel.id, remotePath, guildId);
     setWorkspaceName(newChannel.id, workspaceName);
 
