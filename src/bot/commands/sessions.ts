@@ -9,7 +9,23 @@ import path from "node:path";
 import os from "node:os";
 import readline from "node:readline";
 import { getProject, getSession, upsertSession } from "../../db/database.js";
-import { L } from "../../utils/i18n.js";
+import {
+  s_channelNotRegProject,
+  s_newSessionTitle,
+  s_noSessionsFound,
+  s_createNewSession,
+  s_createNewSessionDesc,
+  s_justNow,
+  s_minutesAgo,
+  s_hoursAgo,
+  s_daysAgo,
+  s_localeName,
+  s_active,
+  s_selectSession,
+  s_claudeCodeSessions,
+  s_foundSessions,
+  s_selectSessionBelow,
+} from "../../i18n/strings.js";
 
 interface SessionInfo {
   sessionId: string;
@@ -241,7 +257,7 @@ export async function execute(
 
   if (!project) {
     await interaction.editReply({
-      content: L("This channel is not registered to any project. Use `/register` first.", "이 채널은 어떤 프로젝트에도 등록되어 있지 않습니다. 먼저 `/register`를 사용하세요."),
+      content: s_channelNotRegProject(),
     });
     return;
   }
@@ -254,11 +270,8 @@ export async function execute(
     await interaction.editReply({
       embeds: [
         {
-          title: L("✨ New Session", "✨ 새 세션"),
-          description: L(
-            `No existing sessions found for \`${project.project_path}\`.\nA new session is ready — your next message will start a new conversation.`,
-            `\`${project.project_path}\`에 대한 기존 세션이 없습니다.\n새 세션이 준비되었습니다 — 다음 메시지부터 새로운 대화가 시작됩니다.`
-          ),
+          title: s_newSessionTitle(),
+          description: s_noSessionsFound(project.project_path),
           color: 0x00ff00,
         },
       ],
@@ -273,8 +286,8 @@ export async function execute(
   // Build select menu (max 25 options, reserve 1 for "New Session")
   const options: Array<{ label: string; description: string; value: string; default?: boolean }> = [
     {
-      label: L("✨ Create New Session", "✨ 새 세션 만들기"),
-      description: L("Start a new conversation without an existing session", "기존 세션 없이 새로운 대화를 시작합니다"),
+      label: s_createNewSession(),
+      description: s_createNewSessionDesc(),
       value: "__new_session__",
     },
   ];
@@ -286,11 +299,11 @@ export async function execute(
     const diffHr = Math.floor(diffMs / 3600000);
     const diffDay = Math.floor(diffMs / 86400000);
     const timeStr =
-      diffMin < 1 ? L("just now", "방금") :
-      diffMin < 60 ? L(`${diffMin}m ago`, `${diffMin}분 전`) :
-      diffHr < 24 ? L(`${diffHr}h ago`, `${diffHr}시간 전`) :
-      diffDay < 7 ? L(`${diffDay}d ago`, `${diffDay}일 전`) :
-      date.toLocaleDateString(L("en-US", "ko-KR"), { month: "short", day: "numeric" });
+      diffMin < 1 ? s_justNow() :
+      diffMin < 60 ? s_minutesAgo(diffMin) :
+      diffHr < 24 ? s_hoursAgo(diffHr) :
+      diffDay < 7 ? s_daysAgo(diffDay) :
+      date.toLocaleDateString(s_localeName(), { month: "short", day: "numeric" });
 
     const sizeKB = Math.round(s.fileSize / 1024);
     const isActive = s.sessionId === activeSessionId;
@@ -298,7 +311,7 @@ export async function execute(
       ? `▶ ${s.firstMessage.slice(0, 48)}`
       : s.firstMessage.slice(0, 50) || `Session ${i + 1}`;
     const desc = isActive
-      ? `${L("Active", "사용 중")} | ${timeStr} | ${sizeKB}KB`
+      ? `${s_active()} | ${timeStr} | ${sizeKB}KB`
       : `${timeStr} | ${sizeKB}KB | ${s.sessionId.slice(0, 8)}...`;
 
     return {
@@ -313,7 +326,7 @@ export async function execute(
 
   const selectMenu = new StringSelectMenuBuilder()
     .setCustomId("session-select")
-    .setPlaceholder(L("Select a session to resume...", "재개할 세션을 선택하세요..."))
+    .setPlaceholder(s_selectSession())
     .addOptions(options);
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
@@ -321,12 +334,12 @@ export async function execute(
   await interaction.editReply({
     embeds: [
       {
-        title: L("Claude Code Sessions", "Claude Code 세션"),
+        title: s_claudeCodeSessions(),
         description: [
           `Project: \`${project.project_path}\``,
-          L(`Found **${sessions.length}** session(s)`, `**${sessions.length}**개의 세션을 찾았습니다`),
+          s_foundSessions(sessions.length),
           "",
-          L("Select a session below to resume or delete it.", "아래에서 세션을 선택하여 재개하거나 삭제하세요."),
+          s_selectSessionBelow(),
         ].join("\n"),
         color: 0x7c3aed,
       },

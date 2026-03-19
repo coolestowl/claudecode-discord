@@ -6,7 +6,28 @@ import {
   StringSelectMenuBuilder,
 } from "discord.js";
 import wcwidth from "wcwidth";
-import { L } from "../utils/i18n.js";
+import {
+  s_truncated,
+  s_stop,
+  s_completed,
+  s_autoApprove,
+  s_toolUse,
+  s_file,
+  s_changes,
+  s_contentPreview,
+  s_command,
+  s_description,
+  s_input,
+  s_approve,
+  s_deny,
+  s_autoApproveAll,
+  s_selectOptions,
+  s_customInput,
+  s_costEst,
+  s_duration,
+  s_taskCompleteEmoji,
+  s_taskCompleteTitle,
+} from "../../i18n/strings.js";
 
 const MAX_DISCORD_LENGTH = 1900; // leave room for formatting
 
@@ -91,7 +112,7 @@ export function convertMarkdownTables(text: string): string {
 export function formatStreamChunk(text: string): string {
   const converted = convertMarkdownTables(text);
   if (converted.length <= MAX_DISCORD_LENGTH) return converted;
-  return converted.slice(0, MAX_DISCORD_LENGTH) + "\n" + L("... (truncated)", "... (잘림)");
+  return converted.slice(0, MAX_DISCORD_LENGTH) + "\n" + s_truncated();
 }
 
 export function splitMessage(text: string): string[] {
@@ -147,7 +168,7 @@ export function createStopButton(
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`stop:${channelId}`)
-      .setLabel(L("Stop", "중지"))
+      .setLabel(s_stop())
       .setStyle(ButtonStyle.Danger)
       .setEmoji("⏹️"),
   );
@@ -157,7 +178,7 @@ export function createCompletedButton(): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId("completed")
-      .setLabel(L("Completed", "완료됨"))
+      .setLabel(s_completed())
       .setStyle(ButtonStyle.Secondary)
       .setEmoji("✅")
       .setDisabled(true),
@@ -173,8 +194,8 @@ export function createToolApprovalEmbed(
   const embed = new EmbedBuilder()
     .setTitle(
       autoApproved
-        ? L(`✅ Auto: ${toolName}`, `✅ 자동 승인: ${toolName}`)
-        : L(`🔧 Tool Use: ${toolName}`, `🔧 도구 사용: ${toolName}`),
+        ? s_autoApprove(toolName)
+        : s_toolUse(toolName),
     )
     .setColor(autoApproved ? 0x00cc66 : 0xffa500)
     .setTimestamp();
@@ -182,15 +203,15 @@ export function createToolApprovalEmbed(
   // Add relevant fields based on tool type
   if (toolName === "Edit" || toolName === "Write") {
     const filePath = (input.file_path as string) ?? "unknown";
-    embed.addFields({ name: L("File", "파일"), value: `\`${filePath}\``, inline: false });
+    embed.addFields({ name: s_file(), value: `\`${filePath}\``, inline: false });
 
     if (input.old_string && input.new_string) {
       const diff = `\`\`\`diff\n- ${String(input.old_string).slice(0, 500)}\n+ ${String(input.new_string).slice(0, 500)}\n\`\`\``;
-      embed.addFields({ name: L("Changes", "변경 사항"), value: diff, inline: false });
+      embed.addFields({ name: s_changes(), value: diff, inline: false });
     } else if (input.content) {
       const preview = String(input.content).slice(0, 500);
       embed.addFields({
-        name: L("Content Preview", "내용 미리보기"),
+        name: s_contentPreview(),
         value: `\`\`\`\n${preview}\n\`\`\``,
         inline: false,
       });
@@ -199,17 +220,17 @@ export function createToolApprovalEmbed(
     const command = (input.command as string) ?? "unknown";
     const description = (input.description as string) ?? "";
     embed.addFields(
-      { name: L("Command", "명령어"), value: `\`\`\`bash\n${command}\n\`\`\``, inline: false },
+      { name: s_command(), value: `\`\`\`bash\n${command}\n\`\`\``, inline: false },
     );
     if (description) {
-      embed.addFields({ name: L("Description", "설명"), value: description, inline: false });
+      embed.addFields({ name: s_description(), value: description, inline: false });
     }
   } else {
     // Generic tool display - skip empty input
     const summary = JSON.stringify(input, null, 2);
     if (summary && summary !== "{}") {
       embed.addFields({
-        name: L("Input", "입력"),
+        name: s_input(),
         value: `\`\`\`json\n${summary.slice(0, 800)}\n\`\`\``,
         inline: false,
       });
@@ -219,17 +240,17 @@ export function createToolApprovalEmbed(
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`approve:${requestId}`)
-      .setLabel(L("Approve", "승인"))
+      .setLabel(s_approve())
       .setStyle(ButtonStyle.Success)
       .setEmoji("✅"),
     new ButtonBuilder()
       .setCustomId(`deny:${requestId}`)
-      .setLabel(L("Deny", "거부"))
+      .setLabel(s_deny())
       .setStyle(ButtonStyle.Danger)
       .setEmoji("❌"),
     new ButtonBuilder()
       .setCustomId(`approve-all:${requestId}`)
-      .setLabel(L("Auto-approve All", "모두 자동 승인"))
+      .setLabel(s_autoApproveAll())
       .setStyle(ButtonStyle.Secondary)
       .setEmoji("⚡"),
   );
@@ -276,7 +297,7 @@ export function createAskUserQuestionEmbed(
     // Use StringSelectMenu for multi-select
     const selectMenu = new StringSelectMenuBuilder()
       .setCustomId(`ask-select:${requestId}`)
-      .setPlaceholder(L("Select options...", "옵션을 선택하세요..."))
+      .setPlaceholder(s_selectOptions())
       .setMinValues(1)
       .setMaxValues(questionData.options.length)
       .addOptions(
@@ -298,7 +319,7 @@ export function createAskUserQuestionEmbed(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`ask-other:${requestId}`)
-          .setLabel(L("Custom input", "직접 입력"))
+          .setLabel(s_customInput())
           .setStyle(ButtonStyle.Secondary)
           .setEmoji("✏️"),
       ),
@@ -316,7 +337,7 @@ export function createAskUserQuestionEmbed(
     buttons.push(
       new ButtonBuilder()
         .setCustomId(`ask-other:${requestId}`)
-        .setLabel(L("Custom input", "직접 입력"))
+        .setLabel(s_customInput())
         .setStyle(ButtonStyle.Secondary)
         .setEmoji("✏️"),
     );
@@ -342,11 +363,11 @@ export function createResultEmbed(
 ): EmbedBuilder {
   const duration = `${(durationMs / 1000).toFixed(1)}s`;
   const footer = showCost
-    ? `${L("Cost (est.)", "비용 (추정)")} : $${costUsd.toFixed(4)}  |  ${L("Duration", "소요 시간")} : ${duration}`
-    : `${L("Duration", "소요 시간")} : ${duration}`;
+    ? `${s_costEst()} : $${costUsd.toFixed(4)}  |  ${s_duration()} : ${duration}`
+    : `${s_duration()} : ${duration}`;
 
   const embed = new EmbedBuilder()
-    .setTitle(L("✅ Task Complete", "✅ 작업 완료"))
+    .setTitle(s_taskCompleteEmoji())
     .setDescription(result.slice(0, 4000))
     .setColor(0x00ff00)
     .setFooter({ text: footer })
@@ -367,8 +388,8 @@ export function formatResultAsPlainText(
 ): string[] {
   const duration = `${(durationMs / 1000).toFixed(1)}s`;
   const metaLine = showCost
-    ? `-# ✅ ${L("Task Complete", "작업 완료")}  ·  ${L("Cost (est.)", "비용 (추정)")}: $${costUsd.toFixed(4)}  ·  ${L("Duration", "소요 시간")}: ${duration}`
-    : `-# ✅ ${L("Task Complete", "작업 완료")}  ·  ${L("Duration", "소요 시간")}: ${duration}`;
+    ? `-# ✅ ${s_taskCompleteTitle()}  ·  ${s_costEst()}: $${costUsd.toFixed(4)}  ·  ${s_duration()}: ${duration}`
+    : `-# ✅ ${s_taskCompleteTitle()}  ·  ${s_duration()}: ${duration}`;
 
   // Reserve space for the meta line + separator
   const metaBlock = `${metaLine}`;

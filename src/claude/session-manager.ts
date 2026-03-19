@@ -10,7 +10,24 @@ import {
   setAutoApprove,
 } from "../db/database.js";
 import { getConfig } from "../utils/config.js";
-import { L } from "../utils/i18n.js";
+import {
+  s_thinkingEmoji,
+  s_thinking,
+  s_readingFiles,
+  s_searchingFiles,
+  s_searchingCode,
+  s_writingFile,
+  s_editingFile,
+  s_runningCommand,
+  s_searchingWeb,
+  s_fetchingUrl,
+  s_updatingTasks,
+  s_questionTimedOut,
+  s_done,
+  s_taskCompleted,
+  s_processingQueued,
+  s_processingQueuedNoCount,
+} from "../../i18n/strings.js";
 import {
   createToolApprovalEmbed,
   createAskUserQuestionEmbed,
@@ -124,14 +141,14 @@ class SessionManager {
     let lastEditTime = 0;
     const stopRow = createStopButton(channelId);
     let currentMessage = await channel.send({
-      content: L("⏳ Thinking...", "⏳ 생각 중..."),
+      content: s_thinkingEmoji(),
       components: [stopRow],
     });
     const EDIT_INTERVAL = 1500; // ms between edits (Discord rate limit friendly)
 
     // Activity tracking for progress display
     const startTime = Date.now();
-    let lastActivity = L("Thinking...", "생각 중...");
+    let lastActivity = s_thinking();
     let toolUseCount = 0;
     let hasTextOutput = false;
 
@@ -209,15 +226,15 @@ class SessionManager {
 
             // Tool activity labels for Discord display
             const toolLabels: Record<string, string> = {
-              Read: L("Reading files", "파일 읽는 중"),
-              Glob: L("Searching files", "파일 검색 중"),
-              Grep: L("Searching code", "코드 검색 중"),
-              Write: L("Writing file", "파일 작성 중"),
-              Edit: L("Editing file", "파일 편집 중"),
-              Bash: L("Running command", "명령어 실행 중"),
-              WebSearch: L("Searching web", "웹 검색 중"),
-              WebFetch: L("Fetching URL", "URL 가져오는 중"),
-              TodoWrite: L("Updating tasks", "작업 업데이트 중"),
+              Read: s_readingFiles(),
+              Glob: s_searchingFiles(),
+              Grep: s_searchingCode(),
+              Write: s_writingFile(),
+              Edit: s_editingFile(),
+              Bash: s_runningCommand(),
+              WebSearch: s_searchingWeb(),
+              WebFetch: s_fetchingUrl(),
+              TodoWrite: s_updatingTasks(),
             };
             const filePath = typeof input.file_path === "string"
               ? ` \`${(input.file_path as string).split(/[\\/]/).pop()}\``
@@ -287,7 +304,7 @@ class SessionManager {
                   updateSessionStatus(channelId, "online");
                   return {
                     behavior: "deny" as const,
-                    message: L("Question timed out", "질문 시간 초과"),
+                    message: s_questionTimedOut(),
                   };
                 }
 
@@ -423,7 +440,7 @@ class SessionManager {
           if (responseBuffer.length > 0) {
             const chunks = splitMessage(responseBuffer);
             try {
-              await currentMessage.edit(chunks[0] || L("Done.", "완료."));
+              await currentMessage.edit(chunks[0] || s_done());
               for (let i = 1; i < chunks.length; i++) {
                 await channel.send(chunks[i]);
               }
@@ -443,7 +460,7 @@ class SessionManager {
 
           // Send result as plain text for proper Markdown rendering
           const resultChunks = formatResultAsPlainText(
-            resultMsg.result ?? L("Task completed", "작업 완료"),
+            resultMsg.result ?? s_taskCompleted(),
             resultMsg.total_cost_usd ?? 0,
             resultMsg.duration_ms ?? 0,
             getConfig().SHOW_COST,
@@ -503,8 +520,8 @@ class SessionManager {
         const remaining = queue.length;
         const preview = next.prompt.length > 40 ? next.prompt.slice(0, 40) + "…" : next.prompt;
         const msg = remaining > 0
-          ? L(`📨 Processing queued message... (remaining: ${remaining})\n> ${preview}`, `📨 대기 중이던 메시지를 처리합니다... (남은 큐: ${remaining}개)\n> ${preview}`)
-          : L(`📨 Processing queued message...\n> ${preview}`, `📨 대기 중이던 메시지를 처리합니다...\n> ${preview}`);
+          ? s_processingQueued(remaining, preview)
+          : s_processingQueuedNoCount(preview);
         channel.send(msg).catch(() => {});
         this.sendMessage(next.channel, next.prompt).catch((err) => {
           console.error("Queue sendMessage error:", err);

@@ -9,13 +9,15 @@ const LANG_FILE = path.join(__dirname, "..", ".tray-lang");
 
 /**
  * Read the current language preference from .tray-lang file.
- * Returns "en" (default) or "kr".
+ * Returns "en" (default), "zh", or "kr".
  * Reads fresh from disk on each call so tray app changes take effect immediately.
  */
-function getCurrentLang(): "en" | "kr" {
+export function getCurrentLang(): "en" | "zh" | "kr" {
   try {
     const content = fs.readFileSync(LANG_FILE, "utf-8").trim();
-    return content === "kr" ? "kr" : "en";
+    if (content === "kr") return "kr";
+    if (content === "zh") return "zh";
+    return "en";
   } catch {
     return "en";
   }
@@ -23,8 +25,11 @@ function getCurrentLang(): "en" | "kr" {
 
 /**
  * Localization helper. Returns the string matching the current language.
- * Usage: L("Hello", "안녕하세요")
+ * Usage: L("Hello", "你好", "안녕하세요")
  */
-export function L(en: string, kr: string): string {
-  return getCurrentLang() === "kr" ? kr : en;
+export function L(en: string, zh: string, kr: string): string {
+  const lang = getCurrentLang();
+  if (lang === "zh") return zh;
+  if (lang === "kr") return kr;
+  return en;
 }

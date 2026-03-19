@@ -4,7 +4,12 @@ import {
 } from "discord.js";
 import type { AuthMode } from "../../db/types.js";
 import { getProject, setAuthMode } from "../../db/database.js";
-import { L } from "../../utils/i18n.js";
+import {
+  s_channelNotRegProject,
+  s_authMode,
+  s_authModeApiKeyDesc,
+  s_authModeSubscriptionDesc,
+} from "../../i18n/strings.js";
 
 export const data = new SlashCommandBuilder()
   .setName("auth-mode")
@@ -29,10 +34,7 @@ export async function execute(
 
   if (!project) {
     await interaction.editReply({
-      content: L(
-        "This channel is not registered to any project.",
-        "이 채널은 어떤 프로젝트에도 등록되어 있지 않습니다.",
-      ),
+      content: s_channelNotRegProject(),
     });
     return;
   }
@@ -43,19 +45,10 @@ export async function execute(
   await interaction.editReply({
     embeds: [
       {
-        title: L(
-          `Auth mode: ${isApiKey ? "API Key" : "Subscription"}`,
-          `인증 모드: ${isApiKey ? "API 키" : "구독"}`,
-        ),
+        title: s_authMode(isApiKey),
         description: isApiKey
-          ? L(
-              "Claude will use the API key environment variables (ANTHROPIC_AUTH_TOKEN, ANTHROPIC_BASE_URL, etc.) from the .env file.",
-              "Claude가 .env 파일의 API 키 환경 변수(ANTHROPIC_AUTH_TOKEN, ANTHROPIC_BASE_URL 등)를 사용합니다.",
-            )
-          : L(
-              "Claude will use your subscription login. API key environment variables will be excluded.",
-              "Claude가 구독 로그인을 사용합니다. API 키 환경 변수는 제외됩니다.",
-            ),
+          ? s_authModeApiKeyDesc()
+          : s_authModeSubscriptionDesc(),
         color: isApiKey ? 0x5865f2 : 0x00b0f4,
       },
     ],

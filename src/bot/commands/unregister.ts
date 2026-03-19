@@ -8,7 +8,7 @@ import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { unregisterProject, getProject } from "../../db/database.js";
 import { sessionManager } from "../../claude/session-manager.js";
-import { L } from "../../utils/i18n.js";
+import { s_deleteWorkspaceOption, s_channelNotRegProject, s_deletingWorkspace, s_workspaceKept, s_projectUnregistered, s_unregisteredDesc } from "../../i18n/strings.js";
 
 const execFile = promisify(execFileCb);
 
@@ -19,10 +19,7 @@ export const data = new SlashCommandBuilder()
     opt
       .setName("delete-workspace")
       .setDescription(
-        L(
-          "Also delete the Coder workspace (default: false)",
-          "Coder 워크스페이스도 함께 삭제합니다 (기본값: false)",
-        ),
+        s_deleteWorkspaceOption(),
       )
       .setRequired(false),
   )
@@ -37,7 +34,7 @@ export async function execute(
 
   if (!project) {
     await interaction.editReply({
-      content: L("This channel is not registered to any project.", "이 채널은 어떤 프로젝트에도 등록되어 있지 않습니다."),
+      content: s_channelNotRegProject(),
     });
     return;
   }
@@ -48,20 +45,17 @@ export async function execute(
   unregisterProject(channelId);
 
   const workspaceNote = deleteWorkspace && project.workspace_name
-    ? L(" Deleting Coder workspace too...", " Coder 워크스페이스도 삭제합니다...")
+    ? s_deletingWorkspace()
     : project.workspace_name
-      ? L(` Coder workspace \`${project.workspace_name}\` was kept.`, ` Coder 워크스페이스 \`${project.workspace_name}\`는 유지됩니다.`)
+      ? s_workspaceKept(project.workspace_name)
       : "";
 
   // Reply first — interaction webhooks work even after the channel is deleted
   await interaction.editReply({
     embeds: [
       {
-        title: L("Project Unregistered", "프로젝트 등록 해제됨"),
-        description: L(
-          `Removed link to \`${project.project_path}\`. Deleting channel...${workspaceNote}`,
-          `\`${project.project_path}\` 연결이 해제되었습니다. 채널을 삭제합니다...${workspaceNote}`,
-        ),
+        title: s_projectUnregistered(),
+        description: s_unregisteredDesc(project.project_path, workspaceNote),
         color: 0xff0000,
       },
     ],

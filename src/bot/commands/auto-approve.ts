@@ -3,7 +3,7 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { getProject, setAutoApprove } from "../../db/database.js";
-import { L } from "../../utils/i18n.js";
+import { s_channelNotRegProject, s_autoApproveStatus, s_autoApproveOnDesc, s_autoApproveOffDesc } from "../../i18n/strings.js";
 
 export const data = new SlashCommandBuilder()
   .setName("auto-approve")
@@ -28,7 +28,7 @@ export async function execute(
 
   if (!project) {
     await interaction.editReply({
-      content: L("This channel is not registered to any project.", "이 채널은 어떤 프로젝트에도 등록되어 있지 않습니다."),
+      content: s_channelNotRegProject(),
     });
     return;
   }
@@ -39,10 +39,10 @@ export async function execute(
   await interaction.editReply({
     embeds: [
       {
-        title: L(`Auto-approve: ${enabled ? "ON" : "OFF"}`, `자동 승인: ${enabled ? "ON" : "OFF"}`),
+        title: s_autoApproveStatus(enabled),
         description: enabled
-          ? L("Claude will automatically approve all tool uses (Edit, Write, Bash, etc.)", "Claude가 모든 도구 사용을 자동으로 승인합니다 (Edit, Write, Bash 등)")
-          : L("Claude will ask for approval before using tools", "Claude가 도구 사용 전에 승인을 요청합니다"),
+          ? s_autoApproveOnDesc()
+          : s_autoApproveOffDesc(),
         color: enabled ? 0x00ff00 : 0xff6600,
       },
     ],

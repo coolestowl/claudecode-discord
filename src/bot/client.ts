@@ -12,7 +12,7 @@ import { getConfig } from "../utils/config.js";
 import { handleMessage } from "./handlers/message.js";
 import { handleButtonInteraction, handleSelectMenuInteraction } from "./handlers/interaction.js";
 import { isAllowedUser } from "../security/guard.js";
-import { L } from "../utils/i18n.js";
+import { s_notAuthorized, s_commandError, s_messageError } from "../i18n/strings.js";
 
 const COMMAND_CACHE_FILE = join(process.cwd(), ".command-cache.json");
 
@@ -129,7 +129,7 @@ export async function startBot(): Promise<Client> {
         // Auth check
         if (!isAllowedUser(interaction.user.id)) {
           await interaction.reply({
-            content: L("You are not authorized to use this bot.", "이 봇을 사용할 권한이 없습니다."),
+            content: s_notAuthorized(),
             flags: ["Ephemeral"],
           });
           return;
@@ -149,7 +149,7 @@ export async function startBot(): Promise<Client> {
       }
     } catch (error) {
       console.error("Interaction error:", error);
-      const content = L("An error occurred while processing your command.", "명령을 처리하는 중 오류가 발생했습니다.");
+      const content = s_commandError();
       try {
         if (interaction.isRepliable()) {
           if (interaction.replied || interaction.deferred) {
@@ -172,7 +172,7 @@ export async function startBot(): Promise<Client> {
       console.error("messageCreate error:", error);
       try {
         if (message.channel.isSendable()) {
-          await message.reply(L("An error occurred while processing your message.", "메시지를 처리하는 중 오류가 발생했습니다."));
+          await message.reply(s_messageError());
         }
       } catch {
         // ignore reply error

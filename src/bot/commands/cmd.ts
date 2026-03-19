@@ -6,13 +6,13 @@ import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 import { getProject } from "../../db/database.js";
 import { getConfig } from "../../utils/config.js";
-import { L } from "../../utils/i18n.js";
+import { s_cmdDescription, s_channelNotReg, s_outputTooLong, s_noOutput } from "../../i18n/strings.js";
 
 const exec = promisify(execCb);
 
 export const data = new SlashCommandBuilder()
   .setName("cmd")
-  .setDescription(L("Run a shell command in the workspace", "워크스페이스에서 셸 명령어 실행"))
+  .setDescription(s_cmdDescription())
   .addStringOption((opt) =>
     opt
       .setName("command")
@@ -28,10 +28,7 @@ export async function execute(
 
   if (!project) {
     await interaction.editReply({
-      content: L(
-        "This channel is not registered. Use `/register` first.",
-        "이 채널은 등록되지 않았습니다. 먼저 `/register`를 사용하세요.",
-      ),
+      content: s_channelNotReg(),
     });
     return;
   }
@@ -64,13 +61,29 @@ export async function execute(
   }
 
   const output = [stdout.trimEnd(), stderr.trimEnd()].filter(Boolean).join("\n");
-  const truncated = output.length > 1900 ? output.slice(0, 1900) + "\n…(truncated)" : output;
+  const header = [
+    `\`$ ${command}\``,
+    exitCode !== 0 ? `⚠️ exit ${exitCode}` : null,
+  ].filter(Boolean).join("\n");
 
-  await interaction.editReply({
-    content: [
-      `\`$ ${command}\``,
-      truncated ? `\`\`\`\n${truncated}\n\`\`\`` : L("*(no output)*", "*(출력 없음)*"),
-      exitCode !== 0 ? `⚠️ exit ${exitCode}` : null,
-    ].filter(Boolean).join("\n"),
-  });
+  if (output.length > 1900) {
+    const preview = output.slice(0, 800);
+    const lineCount = output.split("\n").length;
+    const byteCount = Buffer.byteLength(output, "utf8");
+    await interaction.editReply({
+      content: [
+        header,
+        `\`\`\`\n${preview}\n\`\`\``,
+        s_outputTooLong(lineCount, byteCount),
+      ].join("\n"),
+      files: [{ attachment: Buffer.from(output, "utf8"), name: "output.txt" }],
+    });
+  } else {
+    await interaction.editReply({
+      content: [
+        header,
+        output ? `\`\`\`\n${output}\n\`\`\`` : s_noOutput(),
+      ].join("\n"),
+    });
+  }
 }

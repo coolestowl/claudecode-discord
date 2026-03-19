@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
-import { L } from "../../utils/i18n.js";
+import { s_blockedFile, s_skippedFile, s_downloadFailed, s_notAuthorized, s_rateLimitExceeded, s_queuePendingWait, s_queueFull, s_addToQueue, s_cancel, s_taskInProgress } from "../../i18n/strings.js";
 
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
 
@@ -27,13 +27,13 @@ async function downloadAttachment(
 
   // Block dangerous executables
   if (BLOCKED_EXTENSIONS.has(ext)) {
-    return { skipped: L(`Blocked: \`${attachment.name}\` (dangerous file type)`, `차단됨: \`${attachment.name}\` (위험한 파일 형식)`) };
+    return { skipped: s_blockedFile(attachment.name) };
   }
 
   // Skip files that are too large
   if (attachment.size > MAX_FILE_SIZE) {
     const sizeMB = (attachment.size / 1024 / 1024).toFixed(1);
-    return { skipped: L(`Skipped: \`${attachment.name}\` (${sizeMB}MB exceeds 25MB limit)`, `건너뜀: \`${attachment.name}\` (${sizeMB}MB, 25MB 제한 초과)`) };
+    return { skipped: s_skippedFile(attachment.name, sizeMB) };
   }
 
   const uploadDir = path.join(projectPath, ".claude-uploads");
@@ -47,14 +47,14 @@ async function downloadAttachment(
   try {
     const response = await fetch(attachment.url);
     if (!response.ok || !response.body) {
-      return { skipped: L(`Failed to download: \`${attachment.name}\``, `다운로드 실패: \`${attachment.name}\``) };
+      return { skipped: s_downloadFailed(attachment.name) };
     }
 
     const fileStream = fs.createWriteStream(filePath);
     await pipeline(Readable.fromWeb(response.body as any), fileStream);
   } catch (e) {
     console.warn(`[download] Failed to download attachment ${attachment.name}:`, e instanceof Error ? e.message : e);
-    return { skipped: L(`Failed to download: \`${attachment.name}\``, `다운로드 실패: \`${attachment.name}\``) };
+    return { skipped: s_downloadFailed(attachment.name) };
   }
 
   return { filePath, isImage: IMAGE_EXTENSIONS.has(ext) };
@@ -70,13 +70,13 @@ export async function handleMessage(message: Message): Promise<void> {
 
   // Auth check
   if (!isAllowedUser(message.author.id)) {
-    await message.reply(L("You are not authorized to use this bot.", "이 봇을 사용할 권한이 없습니다."));
+    await message.reply(s_notAuthorized());
     return;
   }
 
   // Rate limit
   if (!checkRateLimit(message.author.id)) {
-    await message.reply(L("Rate limit exceeded. Please wait a moment.", "요청 한도를 초과했습니다. 잠시 후 다시 시도하세요."));
+    await message.reply(s_rateLimitExceeded());
     return;
   }
 
@@ -129,11 +129,11 @@ export async function handleMessage(message: Message): Promise<void> {
   // If session is active, offer to queue the message
   if (sessionManager.isActive(message.channelId)) {
     if (sessionManager.hasQueue(message.channelId)) {
-      await message.reply(L("⏳ A message is already waiting to be queued. Please press the button first.", "⏳ 이미 큐 추가 대기 중인 메시지가 있습니다. 버튼을 먼저 눌러주세요."));
+      await message.reply(s_queuePendingWait());
       return;
     }
     if (sessionManager.isQueueFull(message.channelId)) {
-      await message.reply(L("⏳ Queue is full (max 5). Please wait for the current task to finish.", "⏳ 큐가 가득 찼습니다 (최대 5개). 현재 작업 완료를 기다려주세요."));
+      await message.reply(s_queueFull());
       return;
     }
 
@@ -142,18 +142,18 @@ export async function handleMessage(message: Message): Promise<void> {
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`queue-yes:${message.channelId}`)
-        .setLabel(L("Add to Queue", "큐에 추가"))
+        .setLabel(s_addToQueue())
         .setStyle(ButtonStyle.Success)
         .setEmoji("✅"),
       new ButtonBuilder()
         .setCustomId(`queue-no:${message.channelId}`)
-        .setLabel(L("Cancel", "취소"))
+        .setLabel(s_cancel())
         .setStyle(ButtonStyle.Secondary)
         .setEmoji("❌"),
     );
 
     await message.reply({
-      content: L("⏳ A previous task is in progress. Process this automatically when done?", "⏳ 이전 작업이 진행 중입니다. 완료 후 자동으로 처리할까요?"),
+      content: s_taskInProgress(),
       components: [row],
     });
     return;

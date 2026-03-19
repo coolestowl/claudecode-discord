@@ -10,7 +10,24 @@ import { execFile as execFileCb, exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 import { registerProject, setWorkspaceName } from "../../db/database.js";
 import { getConfig } from "../../utils/config.js";
-import { L } from "../../utils/i18n.js";
+import {
+  s_initDescription,
+  s_categoryOption,
+  s_invalidName,
+  s_templateRequired,
+  s_workspaceExists,
+  s_creatingWorkspace,
+  s_workspaceCreated,
+  s_syncingCredentials,
+  s_syncFailed,
+  s_workspaceRegistered,
+  s_linkedExistingWorkspace,
+  s_createdAndLinkedWorkspace,
+  s_status,
+  s_autoApproveLabel,
+  s_off,
+  s_registrationFailed,
+} from "../../i18n/strings.js";
 
 const execFile = promisify(execFileCb);
 const exec = promisify(execCb);
@@ -18,10 +35,7 @@ const exec = promisify(execCb);
 export const data = new SlashCommandBuilder()
   .setName("register")
   .setDescription(
-    L(
-      "Create a Coder workspace + Discord channel and register it",
-      "Coder 워크스페이스와 Discord 채널을 생성하고 등록합니다",
-    ),
+    s_initDescription(),
   )
   .addStringOption((opt) =>
     opt
@@ -39,7 +53,7 @@ export const data = new SlashCommandBuilder()
   .addChannelOption((opt) =>
     opt
       .setName("category")
-      .setDescription(L("Category to create the channel in", "채널을 생성할 카테고리"))
+      .setDescription(s_categoryOption())
       .setRequired(false)
       .addChannelTypes(ChannelType.GuildCategory),
   )
@@ -62,7 +76,7 @@ export async function execute(
 
   if (!workspaceName) {
     await interaction.editReply({
-      content: L("Invalid name: must contain at least one alphanumeric character.", "잘못된 이름입니다."),
+      content: s_invalidName(),
     });
     return;
   }
@@ -82,10 +96,7 @@ export async function execute(
   // If workspace does not exist, template is required
   if (!workspaceExists && !template) {
     await interaction.editReply({
-      content: L(
-        "❌ Template is required when creating a new workspace. Please provide the `template` option.",
-        "❌ 새 워크스페이스 생성 시 템플릿이 필요합니다. `template` 옵션을 지정해 주세요.",
-      ),
+      content: s_templateRequired(),
     });
     return;
   }
@@ -97,15 +108,12 @@ export async function execute(
     if (workspaceExists) {
       // Workspace already exists — skip creation and wait
       await interaction.editReply({
-        content: L(
-          `ℹ️ Workspace \`${workspaceName}\` already exists. Creating Discord channel...`,
-          `ℹ️ 워크스페이스 \`${workspaceName}\`가 이미 존재합니다. Discord 채널 생성 중...`,
-        ),
+        content: s_workspaceExists(workspaceName),
       });
     } else {
       // Inform the user that workspace creation may take a moment
       await interaction.editReply({
-        content: L(`⏳ Creating Coder workspace \`${workspaceName}\`...`, `⏳ Coder 워크스페이스 \`${workspaceName}\` 생성 중...`),
+        content: s_creatingWorkspace(workspaceName),
       });
 
       // 1. Create Coder workspace
@@ -123,10 +131,7 @@ export async function execute(
 
       // 2. Notify Discord that workspace is created, waiting for initialization
       await interaction.editReply({
-        content: L(
-          `✅ Workspace \`${workspaceName}\` created. Waiting 2 minutes for initialization...`,
-          `✅ 워크스페이스 \`${workspaceName}\` 생성 완료. 초기화 대기 중 (2분)...`,
-        ),
+        content: s_workspaceCreated(workspaceName),
       });
 
       await new Promise((r) => setTimeout(r, 2 * 60 * 1000));
@@ -135,10 +140,7 @@ export async function execute(
       if (config.CODER_CONFIG_WORKSPACE) {
         const configHost = `${config.CODER_CONFIG_WORKSPACE}${config.CODER_SSH_SUFFIX}`;
         await interaction.editReply({
-          content: L(
-            `🔄 Syncing Claude credentials from \`${config.CODER_CONFIG_WORKSPACE}\`...`,
-            `🔄 \`${config.CODER_CONFIG_WORKSPACE}\`에서 Claude 인증 정보 동기화 중...`,
-          ),
+          content: s_syncingCredentials(config.CODER_CONFIG_WORKSPACE),
         });
         try {
           // Stream a tarball of .claude.json + .claude/ from the config workspace
@@ -152,10 +154,7 @@ export async function execute(
           // Non-fatal: log and continue so the workspace is still registered
           console.error(`[register] Credential sync failed: ${(syncErr as Error).message}`);
           await interaction.editReply({
-            content: L(
-              `⚠️ Credential sync failed (workspace still registered): ${(syncErr as Error).message}`,
-              `⚠️ 인증 정보 동기화 실패 (워크스페이스는 등록됨): ${(syncErr as Error).message}`,
-            ),
+            content: s_syncFailed((syncErr as Error).message),
           });
         }
       }
@@ -181,23 +180,17 @@ export async function execute(
       content: "",
       embeds: [
         {
-          title: L("✅ Workspace Registered", "✅ 워크스페이스 등록됨"),
+          title: s_workspaceRegistered(),
           description: workspaceExists
-            ? L(
-                `Linked existing Coder workspace \`${workspaceName}\` to <#${newChannel.id}>.`,
-                `기존 Coder 워크스페이스 \`${workspaceName}\`를 <#${newChannel.id}>에 연결했습니다.`,
-              )
-            : L(
-                `Created Coder workspace \`${workspaceName}\` and linked to <#${newChannel.id}>.`,
-                `Coder 워크스페이스 \`${workspaceName}\`를 생성하고 <#${newChannel.id}>에 연결했습니다.`,
-              ),
+            ? s_linkedExistingWorkspace(workspaceName, newChannel.id)
+            : s_createdAndLinkedWorkspace(workspaceName, newChannel.id),
           color: 0x00ff00,
           fields: [
             { name: "Workspace", value: `\`${workspaceName}\``, inline: true },
             { name: "SSH host", value: `\`${sshHost}\``, inline: true },
             { name: "Remote path", value: `\`${remotePath}\``, inline: true },
-            { name: L("Status", "상태"), value: "🔴 Offline", inline: true },
-            { name: L("Auto-approve", "자동 승인"), value: L("Off", "꺼짐"), inline: true },
+            { name: s_status(), value: "🔴 Offline", inline: true },
+            { name: s_autoApproveLabel(), value: s_off(), inline: true },
           ],
         },
       ],
@@ -216,10 +209,7 @@ export async function execute(
     }
 
     await interaction.editReply({
-      content: L(
-        `❌ Registration failed: ${(err as Error).message}`,
-        `❌ 등록 실패: ${(err as Error).message}`,
-      ),
+      content: s_registrationFailed((err as Error).message),
     });
   }
 }

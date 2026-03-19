@@ -10,7 +10,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { getProject } from "../../db/database.js";
 import { getConfig } from "../../utils/config.js";
-import { L } from "../../utils/i18n.js";
+import { s_claudeUsageTitle, s_noUsageData, s_usageDescription, s_channelNotRegUsage, s_usageApiKeyMode, s_noAccessToken, s_fetchUsageFailed } from "../../i18n/strings.js";
 
 const execFile = promisify(execFileCb);
 
@@ -95,14 +95,14 @@ function flattenUsage(obj: unknown, prefix = "", depth = 0, maxDepth = 4): strin
 /** Format usage response object into Discord embed fields. */
 function buildUsageEmbed(usage: UsageResponse): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle(L("Claude Subscription Usage", "Claude 구독 사용량"))
+    .setTitle(s_claudeUsageTitle())
     .setColor(0x7c3aed)
     .setTimestamp();
 
   // Try to show top-level keys as individual fields; fall back to raw dump
   const entries = Object.entries(usage);
   if (entries.length === 0) {
-    embed.setDescription(L("No usage data returned.", "사용량 데이터가 없습니다."));
+    embed.setDescription(s_noUsageData());
     return embed;
   }
 
@@ -129,10 +129,7 @@ function buildUsageEmbed(usage: UsageResponse): EmbedBuilder {
 export const data = new SlashCommandBuilder()
   .setName("usage")
   .setDescription(
-    L(
-      "Show Claude subscription usage (subscription mode only)",
-      "Claude 구독 사용량 확인 (구독 모드 전용)",
-    ),
+    s_usageDescription(),
   );
 
 export async function execute(
@@ -143,20 +140,14 @@ export async function execute(
 
   if (!project) {
     await interaction.editReply({
-      content: L(
-        "This channel is not registered. Use `/register` first.",
-        "이 채널은 등록되지 않았습니다. 먼저 `/register`를 사용하세요.",
-      ),
+      content: s_channelNotRegUsage(),
     });
     return;
   }
 
   if ((project.auth_mode ?? "subscription") !== "subscription") {
     await interaction.editReply({
-      content: L(
-        "⚠️ The `/usage` command is only available in **subscription** mode. This channel uses API key mode.",
-        "⚠️ `/usage` 명령은 **구독** 모드에서만 사용할 수 있습니다. 이 채널은 API 키 모드입니다.",
-      ),
+      content: s_usageApiKeyMode(),
     });
     return;
   }
@@ -176,10 +167,7 @@ export async function execute(
     const token = extractToken(creds);
     if (!token) {
       await interaction.editReply({
-        content: L(
-          "❌ Could not find `accessToken` in `~/.claude/.credentials.json`. Make sure you are logged in with `claude login`.",
-          "❌ `~/.claude/.credentials.json`에서 `accessToken`을 찾을 수 없습니다. `claude login`으로 로그인되어 있는지 확인하세요.",
-        ),
+        content: s_noAccessToken(),
       });
       return;
     }
@@ -191,7 +179,7 @@ export async function execute(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await interaction.editReply({
-      content: L(`❌ Failed to fetch usage: ${msg}`, `❌ 사용량 조회 실패: ${msg}`),
+      content: s_fetchUsageFailed(msg),
     });
   }
 }

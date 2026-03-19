@@ -7,7 +7,14 @@ import {
 } from "discord.js";
 import { getProject } from "../../db/database.js";
 import { sessionManager } from "../../claude/session-manager.js";
-import { L } from "../../utils/i18n.js";
+import {
+  s_channelNotRegProject,
+  s_noMessagesInQueue,
+  s_clearAll,
+  s_messageQueue,
+  s_queueCleared,
+  s_queueClearedDesc,
+} from "../../i18n/strings.js";
 
 export const data = new SlashCommandBuilder()
   .setName("queue")
@@ -27,10 +34,7 @@ export async function execute(
 
   if (!project) {
     await interaction.editReply({
-      content: L(
-        "This channel is not registered to any project.",
-        "이 채널은 어떤 프로젝트에도 등록되어 있지 않습니다."
-      ),
+      content: s_channelNotRegProject(),
     });
     return;
   }
@@ -41,7 +45,7 @@ export async function execute(
     const queue = sessionManager.getQueue(channelId);
     if (queue.length === 0) {
       await interaction.editReply({
-        content: L("No messages in queue.", "큐에 대기 중인 메시지가 없습니다."),
+        content: s_noMessagesInQueue(),
       });
       return;
     }
@@ -67,7 +71,7 @@ export async function execute(
 
     const clearButton = new ButtonBuilder()
       .setCustomId(`queue-clear:${channelId}`)
-      .setLabel(L("Clear All", "모두 취소"))
+      .setLabel(s_clearAll())
       .setStyle(ButtonStyle.Danger);
 
     // Discord allows max 5 buttons per row, max 5 rows
@@ -81,10 +85,7 @@ export async function execute(
     await interaction.editReply({
       embeds: [
         {
-          title: L(
-            `📋 Message Queue (${queue.length})`,
-            `📋 메시지 큐 (${queue.length}개)`
-          ),
+          title: s_messageQueue(queue.length),
           description: list,
           color: 0x5865f2,
         },
@@ -96,11 +97,8 @@ export async function execute(
     await interaction.editReply({
       embeds: [
         {
-          title: L("Queue Cleared", "큐 초기화됨"),
-          description: L(
-            `Cleared ${cleared} queued message(s).`,
-            `${cleared}개의 대기 중이던 메시지를 취소했습니다.`
-          ),
+          title: s_queueCleared(),
+          description: s_queueClearedDesc(cleared),
           color: 0xff6600,
         },
       ],
