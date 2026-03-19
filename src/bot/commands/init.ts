@@ -39,9 +39,10 @@ export const data = new SlashCommandBuilder()
   )
   .addStringOption((opt) =>
     opt
-      .setName("name")
-      .setDescription("Workspace / project name")
-      .setRequired(true),
+      .setName("workspace")
+      .setDescription("Workspace name — pick an existing one or type a new name to create it")
+      .setRequired(true)
+      .setAutocomplete(true),
   )
   .addStringOption((opt) =>
     opt
@@ -63,7 +64,7 @@ export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
   const config = getConfig();
-  const nameInput = interaction.options.getString("name", true);
+  const nameInput = interaction.options.getString("workspace", true);
   const template = interaction.options.getString("template");
   const guildId = interaction.guildId!;
   const guild = interaction.guild!;
@@ -219,24 +220,54 @@ export async function autocomplete(
 ): Promise<void> {
   const focused = interaction.options.getFocused(true);
 
-  if (focused.name !== "template") {
-    await interaction.respond([]);
+  if (focused.name === "workspace") {
+    try {
+      const { stdout } = await execFile("coder", ["list", "--output", "json", "--search", "owner:me"], {
+        timeout: 10_000,
+      });
+      const rows = JSON.parse(stdout) as Array<
+        { Workspace?: { name: string }; name?: string }
+      >;
+      const query = focused.value.toLowerCase();
+      const choices = rows
+        .map((r) => r.Workspace?.name ?? r.name)
+        .filter((n): n is string => typeof n === "string")
+        .filter((n) => n.toLowerCase().includes(query))
+        .slice(0, 25)
+        .map((n) => ({ name: n, value: n }));
+      // If the typed value doesn't match any existing workspace, surface it as a
+      // "create new" option so the user knows typing a new name is valid.
+      if (
+        focused.value.trim() &&
+        !choices.some((c) => c.value === focused.value.trim())
+      ) {
+        choices.unshift({ name: `✨ Create new: "${focused.value.trim()}"`, value: focused.value.trim() });
+      }
+      await interaction.respond(choices.slice(0, 25));
+    } catch {
+      await interaction.respond([]);
+    }
     return;
   }
 
-  try {
-    const { stdout } = await execFile("coder", ["templates", "list", "--output", "json"], {
-      timeout: 10_000,
-    });
-    const templates = JSON.parse(stdout) as { Template: { name: string; display_name?: string } }[];
-    const query = focused.value.toLowerCase();
-    const choices = templates
-      .map((t) => t.Template)
-      .filter((t) => t.name.toLowerCase().includes(query) || (t.display_name ?? "").toLowerCase().includes(query))
-      .slice(0, 25)
-      .map((t) => ({ name: t.display_name ? `${t.display_name} (${t.name})` : t.name, value: t.name }));
-    await interaction.respond(choices);
-  } catch {
-    await interaction.respond([]);
+  if (focused.name === "template") {
+    try {
+      const { stdout } = await execFile("coder", ["templates", "list", "--output", "json"], {
+        timeout: 10_000,
+      });
+      const templates = JSON.parse(stdout) as { Template: { name: string; display_name?: string } }[];
+      const query = focused.value.toLowerCase();
+      const choices = templates
+        .map((t) => t.Template)
+        .filter((t) => t.name.toLowerCase().includes(query) || (t.display_name ?? "").toLowerCase().includes(query))
+        .slice(0, 25)
+        .map((t) => ({ name: t.display_name ? `${t.display_name} (${t.name})` : t.name, value: t.name }));
+      await interaction.respond(choices);
+    } catch {
+      await interaction.respond([]);
+    }
+    return;
   }
+
+  await interaction.respond([]);
 }
