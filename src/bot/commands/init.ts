@@ -66,7 +66,7 @@ export async function execute(
     return;
   }
 
-  const remotePath = `${config.CODER_REMOTE_HOME}/${workspaceName}`;
+  const remotePath = config.CODER_REMOTE_HOME;
   const sshHost = `${workspaceName}${config.CODER_SSH_SUFFIX}`;
 
   // Inform the user that workspace creation may take a moment
@@ -101,15 +101,7 @@ export async function execute(
 
     await new Promise((r) => setTimeout(r, 2 * 60 * 1000));
 
-    // 3. Create remote project directory
-    await execFile("ssh", [
-      "-o", "StrictHostKeyChecking=no",
-      "-o", "BatchMode=yes",
-      sshHost,
-      "mkdir", "-p", remotePath,
-    ], { timeout: 30_000 });
-
-    // 4. Create Discord channel
+    // 3. Create Discord channel
     const category = interaction.options.getChannel("category");
     const channelName = workspaceName;
     newChannel = await guild.channels.create({
