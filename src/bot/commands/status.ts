@@ -45,12 +45,13 @@ export async function execute(
       name: `${emoji} <#${project.channel_id}>`,
       value: [
         `\`${project.project_path}\``,
+        project.workspace_name ? `${L("Workspace", "워크스페이스")}: \`${project.workspace_name}\`` : null,
         `${L("Status", "상태")}: **${status}**`,
         `${L("Auto-approve", "자동 승인")}: ${project.auto_approve ? L("On", "켜짐") : L("Off", "꺼짐")}`,
         `${L("Auth mode", "인증 모드")}: ${project.auth_mode === "api_key" ? L("API Key", "API 키") : L("Subscription", "구독")}`,
         `${L("Model", "모델")}: ${project.model ? `\`${project.model}\`` : L("default", "기본값")}`,
         `${L("Last activity", "마지막 활동")}: ${lastActivity}`,
-      ].join("\n"),
+      ].filter(Boolean).join("\n"),
       inline: false,
     });
   }
