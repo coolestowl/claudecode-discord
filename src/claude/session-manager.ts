@@ -172,7 +172,9 @@ class SessionManager {
             const envStr = Object.entries(remoteEnv)
               .map(([k, v]) => `${k}=${singleQuote(v)}`)
               .join(" ");
-            const remoteCmd = `cd ${singleQuote(cwd ?? config.CODER_REMOTE_HOME)} && ${envStr ? `env ${envStr} ` : ""}${command} ${args.map(singleQuote).join(" ")}`;
+            // Use absolute path so SSH non-login shells (no .bashrc) can find claude
+            const remoteCommand = command === "claude" ? "/home/coder/.local/bin/claude" : command;
+            const remoteCmd = `cd ${singleQuote(cwd ?? config.CODER_REMOTE_HOME)} && ${envStr ? `env ${envStr} ` : ""}${remoteCommand} ${args.map(singleQuote).join(" ")}`;
             return spawn("ssh", [
               "-o", "StrictHostKeyChecking=no",
               "-o", "BatchMode=yes",

@@ -43,7 +43,7 @@ export async function execute(
   if (project.workspace_name) {
     const sshHost = `${project.workspace_name}${config.CODER_SSH_SUFFIX}`;
     const escaped = command.replace(/'/g, "'\\''");
-    fullCommand = `ssh -o StrictHostKeyChecking=no -o BatchMode=yes ${sshHost} 'cd ${project.project_path} && ${escaped}'`;
+    fullCommand = `ssh -tt -o StrictHostKeyChecking=no -o BatchMode=yes ${sshHost} 'cd ${project.project_path} && ${escaped}'`;
   } else {
     fullCommand = `cd ${project.project_path} && ${command}`;
   }
