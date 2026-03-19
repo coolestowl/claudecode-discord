@@ -28,6 +28,9 @@ const envSchema = z.object({
   // Comma-separated key=value pairs forwarded as a single --parameter to `coder create`
   // e.g. "region=us-east-1,size=large"
   CODER_CREATE_PARAMETERS: z.string().optional(),
+  // Workspace to sync Claude credentials from after creating a new workspace
+  // e.g. "cc-config" → scp cc-config.coder:/home/coder/.claude* to the new workspace
+  CODER_CONFIG_WORKSPACE: z.string().optional(),
 });
 
 export type Config = z.infer<typeof envSchema>;
