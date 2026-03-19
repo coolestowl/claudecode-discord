@@ -54,7 +54,7 @@ export async function startBot(): Promise<Client> {
   client.on("ready", async () => {
     console.log(`Bot logged in as ${client.user?.tag}`);
     try {
-      const rest = new REST({ version: "10" }).setToken(config.DISCORD_BOT_TOKEN);
+      const rest = new REST({ version: "10", timeout: 15_000 }).setToken(config.DISCORD_BOT_TOKEN);
       const appId = (await rest.get(Routes.currentApplication()) as { id: string }).id;
       const route = Routes.applicationGuildCommands(appId, config.DISCORD_GUILD_ID);
 
