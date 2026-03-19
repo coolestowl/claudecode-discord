@@ -176,9 +176,10 @@ class SessionManager {
             const envStr = Object.entries(remoteEnv)
               .map(([k, v]) => `${k}=${singleQuote(v)}`)
               .join(" ");
-            // Use absolute path so SSH non-login shells (no .bashrc) can find claude
-            const remoteCommand = command === "claude" ? "/home/coder/.local/bin/claude" : command;
-            const remoteCmd = `cd ${singleQuote(cwd ?? config.CODER_REMOTE_HOME)} && ${envStr ? `env ${envStr} ` : ""}${remoteCommand} ${args.map(singleQuote).join(" ")}`;
+            // SDK spawns: node /local/path/to/cli.js [claude-args...]
+            // For remote, skip the local cli.js and use the remote claude binary instead.
+            const claudeArgs = command === "node" ? args.slice(1) : args;
+            const remoteCmd = `cd ${singleQuote(cwd ?? config.CODER_REMOTE_HOME)} && ${envStr ? `env ${envStr} ` : ""}/home/coder/.local/bin/claude ${claudeArgs.map(singleQuote).join(" ")}`;
             console.log(`[claude:ssh] host=${sshHost} cmd=${remoteCmd}`);
             return spawn("ssh", [
               "-o", "StrictHostKeyChecking=no",
