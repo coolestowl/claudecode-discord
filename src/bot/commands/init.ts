@@ -163,7 +163,8 @@ export async function execute(
 
     // 3. Create Discord channel
     const category = interaction.options.getChannel("category");
-    const channelName = workspaceName;
+    const uniqueSuffix = Math.random().toString(36).slice(2, 6);
+    const channelName = `${workspaceName}-${uniqueSuffix}`;
     newChannel = await guild.channels.create({
       name: channelName,
       type: ChannelType.GuildText,
