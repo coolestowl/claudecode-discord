@@ -58,10 +58,7 @@ export async function startBot(): Promise<Client> {
       const appId = (await rest.get(Routes.currentApplication()) as { id: string }).id;
       const route = Routes.applicationGuildCommands(appId, config.DISCORD_GUILD_ID);
 
-      // Clear existing guild commands before re-registering
-      await rest.put(route, { body: [] });
-      console.log("Cleared existing guild slash commands");
-
+      // PUT replaces all guild commands atomically — no need to clear first
       const commandData = commands.map((c) => c.data.toJSON());
       await rest.put(route, { body: commandData });
       console.log(`Registered ${commandData.length} slash commands`);
