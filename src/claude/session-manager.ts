@@ -197,13 +197,13 @@ class SessionManager {
             // SDK spawns: node /local/path/to/cli.js [claude-args...]
             // For remote, skip the local cli.js and use the remote claude binary instead.
             const claudeArgs = command === "node" ? args.slice(1) : args;
-            const settingsIdx = claudeArgs.indexOf("--settings-sources");
+            const settingsIdx = claudeArgs.indexOf("--setting-sources");
             let finalArgs: string[];
             if (settingsIdx !== -1) {
               finalArgs = [...claudeArgs];
               finalArgs[settingsIdx + 1] = "user,project";
             } else {
-              finalArgs = [...claudeArgs, "--settings-sources", "user,project"];
+              finalArgs = [...claudeArgs, "--setting-sources", "user,project"];
             }
             const remoteCmd = `cd ${singleQuote(cwd ?? config.CODER_REMOTE_HOME)} && ${envStr ? `env ${envStr} ` : ""}/home/coder/.local/bin/claude ${finalArgs.map(singleQuote).join(" ")}`;
             console.log(`[claude:ssh] host=${sshHost} cmd=${remoteCmd}`);
