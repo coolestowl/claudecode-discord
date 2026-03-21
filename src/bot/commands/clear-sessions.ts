@@ -9,7 +9,7 @@ import { execSync } from "node:child_process";
 import { getProject, clearSessionId } from "../../db/database.js";
 import { findSessionDir } from "./sessions.js";
 import { getConfig } from "../../utils/config.js";
-import { s_channelNotRegProject, s_noSessionDir, s_noSessionFiles, s_sessionsCleared, s_sessionsClearedDesc } from "../../i18n/strings.js";
+import { s_channelNotRegProject, s_noSessionDir, s_noSessionFiles, s_sessionsCleared } from "../../i18n/strings.js";
 
 /** Wrap a string in single quotes, escaping any embedded single quotes. */
 function singleQuote(s: string): string {
@@ -42,27 +42,11 @@ export async function execute(
     const encodedPath = project.project_path.replace(/[\\/\_]/g, "-");
     const remoteDir = `${config.CODER_REMOTE_HOME}/.claude/projects/${encodedPath}`;
 
-    let deleted = 0;
     try {
-      // Count .jsonl files first so we can give an accurate reply
-      const countOut = execSync(
-        `ssh -o StrictHostKeyChecking=no -o BatchMode=yes ${sshHost} /bin/sh -c ${singleQuote(
-          `find ${singleQuote(remoteDir)} -name "*.jsonl" 2>/dev/null | wc -l`,
-        )}`,
-        { encoding: "utf-8", timeout: 15_000 },
-      ).trim();
-
-      deleted = parseInt(countOut, 10) || 0;
-
-      if (deleted === 0) {
-        await interaction.editReply({ content: s_noSessionFiles() });
-        return;
-      }
-
       // Delete the files on the remote machine
       execSync(
         `ssh -o StrictHostKeyChecking=no -o BatchMode=yes ${sshHost} /bin/sh -c ${singleQuote(
-          `find ${singleQuote(remoteDir)} -name "*.jsonl" -delete`,
+          `find ${singleQuote(remoteDir)} -name "*.jsonl" -delete 2>/dev/null`,
         )}`,
         { timeout: 15_000 },
       );
@@ -80,10 +64,7 @@ export async function execute(
       embeds: [
         {
           title: s_sessionsCleared(),
-          description: [
-            `Project: \`${project.project_path}\``,
-            s_sessionsClearedDesc(deleted),
-          ].join("\n"),
+          description: `Project: \`${project.project_path}\``,
           color: 0xff6b6b,
         },
       ],
@@ -108,11 +89,9 @@ export async function execute(
     return;
   }
 
-  let deleted = 0;
   for (const file of files) {
     try {
       fs.unlinkSync(path.join(sessionDir, file));
-      deleted++;
     } catch {
       // skip files that can't be deleted
     }
@@ -125,10 +104,7 @@ export async function execute(
     embeds: [
       {
         title: s_sessionsCleared(),
-        description: [
-          `Project: \`${project.project_path}\``,
-          s_sessionsClearedDesc(deleted),
-        ].join("\n"),
+        description: `Project: \`${project.project_path}\``,
         color: 0xff6b6b,
       },
     ],
