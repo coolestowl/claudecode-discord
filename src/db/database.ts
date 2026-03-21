@@ -140,6 +140,12 @@ export function updateSessionStatus(
   ).run(status, channelId);
 }
 
+export function clearSessionId(channelId: string): void {
+  db.prepare(
+    "UPDATE sessions SET session_id = NULL, last_activity = datetime('now') WHERE channel_id = ?",
+  ).run(channelId);
+}
+
 export function getAllSessions(guildId: string): (Session & { project_path: string })[] {
   return db
     .prepare(`
