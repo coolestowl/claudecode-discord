@@ -212,12 +212,16 @@ class SessionManager {
             }
             const remoteCmd = `source ~/.profile && cd ${singleQuote(cwd ?? config.CODER_REMOTE_HOME)} && ${envStr ? `env ${envStr} ` : ""}claude ${finalArgs.map(singleQuote).join(" ")}`;
             console.log(`[claude:ssh] host=${sshHost} cmd=${remoteCmd}`);
-            return spawn("ssh", [
+            const proc = spawn("ssh", [
               "-o", "StrictHostKeyChecking=no",
               "-o", "BatchMode=yes",
               sshHost,
               "/bin/bash", "-c", remoteCmd,
             ], { stdio: ["pipe", "pipe", "pipe"] });
+            proc.stderr?.on("data", (chunk: Buffer) => {
+              console.error(`[claude:ssh:stderr] host=${sshHost}`, chunk.toString().trimEnd());
+            });
+            return proc;
           })
         : undefined;
 
