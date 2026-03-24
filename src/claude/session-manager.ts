@@ -210,13 +210,13 @@ class SessionManager {
             } else {
               finalArgs = [...claudeArgs, "--setting-sources", "user,project"];
             }
-            const remoteCmd = `cd ${singleQuote(cwd ?? config.CODER_REMOTE_HOME)} && ${envStr ? `env ${envStr} ` : ""}/home/coder/.local/bin/claude ${finalArgs.map(singleQuote).join(" ")}`;
+            const remoteCmd = `source .profile && cd ${singleQuote(cwd ?? config.CODER_REMOTE_HOME)} && ${envStr ? `env ${envStr} ` : ""}claude ${finalArgs.map(singleQuote).join(" ")}`;
             console.log(`[claude:ssh] host=${sshHost} cmd=${remoteCmd}`);
             return spawn("ssh", [
               "-o", "StrictHostKeyChecking=no",
               "-o", "BatchMode=yes",
               sshHost,
-              "/bin/sh", "-c", remoteCmd,
+              "/bin/bash", "-c", remoteCmd,
             ], { stdio: ["pipe", "pipe", "pipe"] });
           })
         : undefined;
