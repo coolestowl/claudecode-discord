@@ -1,9 +1,10 @@
 import {
   ChatInputCommandInteraction,
+  AutocompleteInteraction,
   SlashCommandBuilder,
   PermissionFlagsBits,
 } from "discord.js";
-import { exec as execCb } from "node:child_process";
+import { exec as execCb, execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { getProject } from "../../db/database.js";
 import { getConfig } from "../../utils/config.js";
@@ -14,14 +15,23 @@ import {
   s_syncConfigDescription,
   s_syncConfigNoConfigWorkspace,
   s_syncConfigSuccess,
+  s_syncConfigWorkspaceOptionDescription,
 } from "../../i18n/strings.js";
 
 const exec = promisify(execCb);
+const execFile = promisify(execFileCb);
 
 export const data = new SlashCommandBuilder()
   .setName("sync-config")
   .setDescription(s_syncConfigDescription())
-  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+  .addStringOption((option) =>
+    option
+      .setName("workspace")
+      .setDescription(s_syncConfigWorkspaceOptionDescription())
+      .setRequired(false)
+      .setAutocomplete(true),
+  );
 
 export async function execute(
   interaction: ChatInputCommandInteraction,
@@ -35,15 +45,19 @@ export async function execute(
     return;
   }
 
-  if (!config.CODER_CONFIG_WORKSPACE) {
+  // Use the workspace specified by the user, or fall back to the env-configured default
+  const configWorkspace =
+    interaction.options.getString("workspace") ?? config.CODER_CONFIG_WORKSPACE;
+
+  if (!configWorkspace) {
     await interaction.editReply({ content: s_syncConfigNoConfigWorkspace() });
     return;
   }
 
-  const configHost = `${config.CODER_CONFIG_WORKSPACE}${config.CODER_SSH_SUFFIX}`;
+  const configHost = `${configWorkspace}${config.CODER_SSH_SUFFIX}`;
 
   await interaction.editReply({
-    content: s_syncingCredentials(config.CODER_CONFIG_WORKSPACE),
+    content: s_syncingCredentials(configWorkspace),
   });
 
   try {
@@ -65,7 +79,7 @@ export async function execute(
     console.log(`[sync-config] Claude config synced: ${configHost} → ${target}`);
 
     await interaction.editReply({
-      content: s_syncConfigSuccess(config.CODER_CONFIG_WORKSPACE, target),
+      content: s_syncConfigSuccess(configWorkspace, target),
     });
   } catch (err) {
     console.error(`[sync-config] Sync failed: ${(err as Error).message}`);
@@ -73,4 +87,36 @@ export async function execute(
       content: s_syncFailed((err as Error).message),
     });
   }
+}
+
+export async function autocomplete(
+  interaction: AutocompleteInteraction,
+): Promise<void> {
+  const focused = interaction.options.getFocused(true);
+
+  if (focused.name === "workspace") {
+    try {
+      const { stdout } = await execFile(
+        "coder",
+        ["list", "--output", "json", "--search", "owner:me"],
+        { timeout: 10_000 },
+      );
+      const rows = JSON.parse(stdout) as Array<
+        { Workspace?: { name: string }; name?: string }
+      >;
+      const query = focused.value.toLowerCase();
+      const choices = rows
+        .map((r) => r.Workspace?.name ?? r.name)
+        .filter((n): n is string => typeof n === "string")
+        .filter((n) => n.toLowerCase().includes(query))
+        .slice(0, 25)
+        .map((n) => ({ name: n, value: n }));
+      await interaction.respond(choices);
+    } catch {
+      await interaction.respond([]);
+    }
+    return;
+  }
+
+  await interaction.respond([]);
 }

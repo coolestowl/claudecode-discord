@@ -79,9 +79,15 @@ export const s_syncConfigDescription = () =>
   );
 export const s_syncConfigNoConfigWorkspace = () =>
   L(
-    "❌ `CODER_CONFIG_WORKSPACE` is not configured. Set it in your `.env` file first.",
-    "❌ `CODER_CONFIG_WORKSPACE` 未配置，请先在 `.env` 文件中设置。",
-    "❌ `CODER_CONFIG_WORKSPACE`가 설정되지 않았습니다. 먼저 `.env` 파일에서 설정하세요.",
+    "❌ No source workspace specified. Either pass the `workspace` option or set `CODER_CONFIG_WORKSPACE` in your `.env` file.",
+    "❌ 未指定来源工作空间。请通过 `workspace` 参数指定，或在 `.env` 文件中设置 `CODER_CONFIG_WORKSPACE`。",
+    "❌ 소스 워크스페이스가 지정되지 않았습니다. `workspace` 옵션을 전달하거나 `.env` 파일에서 `CODER_CONFIG_WORKSPACE`를 설정하세요.",
+  );
+export const s_syncConfigWorkspaceOptionDescription = () =>
+  L(
+    "Source workspace to sync config from (overrides CODER_CONFIG_WORKSPACE)",
+    "要同步配置的来源工作空间（覆盖 CODER_CONFIG_WORKSPACE 环境变量）",
+    "설정을 동기화할 소스 워크스페이스 (CODER_CONFIG_WORKSPACE 환경변수보다 우선함)",
   );
 export const s_syncConfigSuccess = (from: string, to: string) =>
   L(
