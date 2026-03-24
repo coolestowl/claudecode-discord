@@ -3,58 +3,14 @@ import {
   SlashCommandBuilder,
   EmbedBuilder,
 } from "discord.js";
-import { execFile as execFileCb } from "node:child_process";
-import { promisify } from "node:util";
-import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { getProject } from "../../db/database.js";
 import { getConfig } from "../../utils/config.js";
 import { s_claudeUsageTitle, s_noUsageData, s_usageDescription, s_channelNotRegUsage, s_usageApiKeyMode, s_noAccessToken, s_fetchUsageFailed } from "../../i18n/strings.js";
 
-const execFile = promisify(execFileCb);
-
-const CREDENTIALS_RELATIVE = ".claude/.credentials.json";
 const USAGE_API_URL = "https://api.anthropic.com/api/oauth/usage";
-
-interface Credentials {
-  claudeAiOauth?: {
-    accessToken?: string;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
-}
 
 interface UsageResponse {
   [key: string]: unknown;
-}
-
-/** Read credentials from local filesystem. */
-async function readLocalCredentials(): Promise<Credentials> {
-  const credPath = join(homedir(), CREDENTIALS_RELATIVE);
-  const raw = await readFile(credPath, "utf-8");
-  return JSON.parse(raw) as Credentials;
-}
-
-/** Read credentials from a remote Coder workspace via SSH. */
-async function readRemoteCredentials(sshHost: string): Promise<Credentials> {
-  const { stdout } = await execFile(
-    "ssh",
-    [
-      "-o", "StrictHostKeyChecking=no",
-      "-o", "BatchMode=yes",
-      sshHost,
-      "cat",
-      `~/${CREDENTIALS_RELATIVE}`,
-    ],
-    { timeout: 15_000 },
-  );
-  return JSON.parse(stdout) as Credentials;
-}
-
-/** Extract accessToken from credentials object. */
-function extractToken(creds: Credentials): string | null {
-  return creds?.claudeAiOauth?.accessToken ?? null;
 }
 
 /** Fetch usage from the Anthropic OAuth usage API. */
@@ -99,7 +55,6 @@ function buildUsageEmbed(usage: UsageResponse): EmbedBuilder {
     .setColor(0x7c3aed)
     .setTimestamp();
 
-  // Try to show top-level keys as individual fields; fall back to raw dump
   const entries = Object.entries(usage);
   if (entries.length === 0) {
     embed.setDescription(s_noUsageData());
@@ -128,9 +83,7 @@ function buildUsageEmbed(usage: UsageResponse): EmbedBuilder {
 
 export const data = new SlashCommandBuilder()
   .setName("usage")
-  .setDescription(
-    s_usageDescription(),
-  );
+  .setDescription(s_usageDescription());
 
 export async function execute(
   interaction: ChatInputCommandInteraction,
@@ -139,47 +92,27 @@ export async function execute(
   const project = getProject(channelId);
 
   if (!project) {
-    await interaction.editReply({
-      content: s_channelNotRegUsage(),
-    });
+    await interaction.editReply({ content: s_channelNotRegUsage() });
     return;
   }
 
   if ((project.auth_mode ?? "subscription") !== "subscription") {
-    await interaction.editReply({
-      content: s_usageApiKeyMode(),
-    });
+    await interaction.editReply({ content: s_usageApiKeyMode() });
+    return;
+  }
+
+  const token = getConfig().OAUTH_TOKEN;
+  if (!token) {
+    await interaction.editReply({ content: s_noAccessToken() });
     return;
   }
 
   try {
-    const config = getConfig();
-
-    // Read credentials: remote if workspace_name is set, local otherwise
-    let creds: Credentials;
-    if (project.workspace_name) {
-      const sshHost = `${project.workspace_name}${config.CODER_SSH_SUFFIX}`;
-      creds = await readRemoteCredentials(sshHost);
-    } else {
-      creds = await readLocalCredentials();
-    }
-
-    const token = extractToken(creds);
-    if (!token) {
-      await interaction.editReply({
-        content: s_noAccessToken(),
-      });
-      return;
-    }
-
     const usage = await fetchUsage(token);
     const embed = buildUsageEmbed(usage);
-
     await interaction.editReply({ embeds: [embed] });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await interaction.editReply({
-      content: s_fetchUsageFailed(msg),
-    });
+    await interaction.editReply({ content: s_fetchUsageFailed(msg) });
   }
 }

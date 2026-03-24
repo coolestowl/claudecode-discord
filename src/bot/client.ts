@@ -48,9 +48,8 @@ import * as modelCmd from "./commands/model.js";
 import * as newSessionCmd from "./commands/new-session.js";
 import * as usageCmd from "./commands/usage.js";
 import * as cmdCmd from "./commands/cmd.js";
-import * as syncConfigCmd from "./commands/sync-config.js";
 
-const commands = [unregisterCmd, statusCmd, stopCmd, autoApproveCmd, sessionsCmd, clearSessionsCmd, lastCmd, queueCmd, initCmd, authModeCmd, modelCmd, newSessionCmd, usageCmd, cmdCmd, syncConfigCmd];
+const commands = [unregisterCmd, statusCmd, stopCmd, autoApproveCmd, sessionsCmd, clearSessionsCmd, lastCmd, queueCmd, initCmd, authModeCmd, modelCmd, newSessionCmd, usageCmd, cmdCmd];
 const commandMap = new Collection<
   string,
   { execute: (interaction: ChatInputCommandInteraction) => Promise<void> }

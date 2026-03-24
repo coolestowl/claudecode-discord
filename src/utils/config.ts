@@ -28,9 +28,9 @@ const envSchema = z.object({
   // Comma-separated key=value pairs forwarded as a single --parameter to `coder create`
   // e.g. "region=us-east-1,size=large"
   CODER_CREATE_PARAMETERS: z.string().optional(),
-  // Workspace to sync Claude credentials from after creating a new workspace
-  // e.g. "cc-config" → scp cc-config.coder:/home/coder/.claude* to the new workspace
-  CODER_CONFIG_WORKSPACE: z.string().optional(),
+  // Long-lived Claude Code OAuth token for subscription mode.
+  // Passed as CLAUDE_CODE_OAUTH_TOKEN to the claude process, and used by /usage to query the API.
+  OAUTH_TOKEN: z.string().optional(),
 });
 
 export type Config = z.infer<typeof envSchema>;

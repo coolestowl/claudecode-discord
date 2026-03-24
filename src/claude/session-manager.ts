@@ -98,13 +98,17 @@ function buildEnv(authMode: string, model?: string | null): Record<string, strin
     env.ENABLE_TOOL_SEARCH = "true";
     return env;
   }
-  // subscription mode: strip API-key vars so Claude uses its own login
+  // subscription mode: strip API-key vars, inject OAuth token if configured
   const env = { ...process.env };
   for (const key of API_KEY_ENV_VARS) {
     delete env[key];
   }
   for (const key of SUBSCRIPTION_STRIP_VARS) {
     delete env[key];
+  }
+  const oauthToken = getConfig().OAUTH_TOKEN;
+  if (oauthToken) {
+    env.CLAUDE_CODE_OAUTH_TOKEN = oauthToken;
   }
   return env;
 }
@@ -178,8 +182,7 @@ class SessionManager {
             const sshHost = `${project.workspace_name}${config.CODER_SSH_SUFFIX}`;
 
             // Only forward the vars Claude Code actually needs.
-            // Subscription mode: Claude on the remote uses its own login — pass nothing.
-            // API key mode: forward only the Anthropic-specific vars that are set.
+            // Subscription mode: inject OAuth token if configured; API key mode: forward Anthropic vars.
             const remoteEnv: Record<string, string> = {};
             if ((project.auth_mode ?? "subscription") === "api_key") {
               for (const key of API_KEY_ENV_VARS) {
@@ -189,6 +192,8 @@ class SessionManager {
               if (project.model) remoteEnv.ANTHROPIC_MODEL = project.model;
             } else {
               remoteEnv.ENABLE_TOOL_SEARCH = "true";
+              const oauthToken = config.OAUTH_TOKEN;
+              if (oauthToken) remoteEnv.CLAUDE_CODE_OAUTH_TOKEN = oauthToken;
             }
 
             const envStr = Object.entries(remoteEnv)

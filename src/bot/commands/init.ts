@@ -6,7 +6,7 @@ import {
   ChannelType,
   TextChannel,
 } from "discord.js";
-import { execFile as execFileCb, exec as execCb } from "node:child_process";
+import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { registerProject, setWorkspaceName } from "../../db/database.js";
 import { getConfig } from "../../utils/config.js";
@@ -18,8 +18,6 @@ import {
   s_workspaceExists,
   s_creatingWorkspace,
   s_workspaceCreated,
-  s_syncingCredentials,
-  s_syncFailed,
   s_workspaceRegistered,
   s_linkedExistingWorkspace,
   s_createdAndLinkedWorkspace,
@@ -30,7 +28,6 @@ import {
 } from "../../i18n/strings.js";
 
 const execFile = promisify(execFileCb);
-const exec = promisify(execCb);
 
 export const data = new SlashCommandBuilder()
   .setName("register")
@@ -137,28 +134,6 @@ export async function execute(
 
       await new Promise((r) => setTimeout(r, 2 * 60 * 1000));
 
-      // 3. Sync Claude credentials from config workspace (if configured)
-      if (config.CODER_CONFIG_WORKSPACE) {
-        const configHost = `${config.CODER_CONFIG_WORKSPACE}${config.CODER_SSH_SUFFIX}`;
-        await interaction.editReply({
-          content: s_syncingCredentials(config.CODER_CONFIG_WORKSPACE),
-        });
-        try {
-          // Stream a tarball of .claude.json + .claude/ from the config workspace
-          // directly into the new workspace via the local machine as relay.
-          await exec(
-            `ssh ${configHost} "tar -czf - -C /home/coder .claude.json .claude 2>/dev/null" | ssh ${sshHost} "cd /home/coder && rm -f .claude.json && rm -rf .claude && tar -xzf -"`,
-            { timeout: 60_000 },
-          );
-          console.log(`[register] Claude credentials synced from ${configHost} → ${sshHost}`);
-        } catch (syncErr) {
-          // Non-fatal: log and continue so the workspace is still registered
-          console.error(`[register] Credential sync failed: ${(syncErr as Error).message}`);
-          await interaction.editReply({
-            content: s_syncFailed((syncErr as Error).message),
-          });
-        }
-      }
     }
 
     // 3. Create Discord channel
