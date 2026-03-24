@@ -183,7 +183,10 @@ class SessionManager {
 
             // Only forward the vars Claude Code actually needs.
             // Subscription mode: inject OAuth token if configured; API key mode: forward Anthropic vars.
-            const remoteEnv: Record<string, string> = {};
+            const remoteHome = config.CODER_REMOTE_HOME;
+            const remoteEnv: Record<string, string> = {
+              PATH: `${remoteHome}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`,
+            };
             if ((project.auth_mode ?? "subscription") === "api_key") {
               for (const key of API_KEY_ENV_VARS) {
                 const val = process.env[key];
@@ -210,13 +213,13 @@ class SessionManager {
             } else {
               finalArgs = [...claudeArgs, "--setting-sources", "user,project"];
             }
-            const remoteCmd = `export PATH="$HOME/.local/bin:$PATH" && cd ${singleQuote(cwd ?? config.CODER_REMOTE_HOME)} && ${envStr ? `env ${envStr} ` : ""}claude ${finalArgs.map(singleQuote).join(" ")}`;
+            const remoteCmd = `cd ${singleQuote(cwd ?? remoteHome)} && env ${envStr} ${remoteHome}/.local/bin/claude ${finalArgs.map(singleQuote).join(" ")}`;
             console.log(`[claude:ssh] host=${sshHost} cmd=${remoteCmd}`);
             const proc = spawn("ssh", [
               "-o", "StrictHostKeyChecking=no",
               "-o", "BatchMode=yes",
               sshHost,
-              "/bin/bash", "--login", "-c", remoteCmd,
+              "/bin/bash", "-c", remoteCmd,
             ], { stdio: ["pipe", "pipe", "pipe"] });
             proc.stderr?.on("data", (chunk: Buffer) => {
               console.error(`[claude:ssh:stderr] host=${sshHost}`, chunk.toString().trimEnd());
