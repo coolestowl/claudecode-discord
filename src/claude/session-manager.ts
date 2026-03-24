@@ -222,7 +222,9 @@ class SessionManager {
               "/bin/bash", "-c", remoteCmd,
             ], { stdio: ["pipe", "pipe", "pipe"] });
             proc.stderr?.on("data", (chunk: Buffer) => {
-              console.error(`[claude:ssh:stderr] host=${sshHost}`, chunk.toString().trimEnd());
+              const text = chunk.toString().trimEnd();
+              console.error(`[claude:ssh:stderr] host=${sshHost}`, text);
+              channel.send(`⚠️ \`[ssh stderr]\` \`\`\`\n${text}\n\`\`\``).catch(() => {});
             });
             return proc;
           })
