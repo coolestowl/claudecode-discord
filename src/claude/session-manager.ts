@@ -213,7 +213,7 @@ class SessionManager {
             } else {
               finalArgs = [...claudeArgs, "--setting-sources", "user,project"];
             }
-            const remoteCmd = `cd ${singleQuote(cwd ?? remoteHome)} && env ${envStr} ${remoteHome}/.local/bin/claude ${finalArgs.map(singleQuote).join(" ")}`;
+            const remoteCmd = `cd ${singleQuote(cwd ?? remoteHome)} && env ${envStr} claude ${finalArgs.map(singleQuote).join(" ")}`;
             console.log(`[claude:ssh] host=${sshHost} cmd=${remoteCmd}`);
             const proc = spawn("ssh", [
               "-o", "StrictHostKeyChecking=no",
