@@ -9,7 +9,7 @@ import { execSync } from "node:child_process";
 import { getProject, clearSessionId } from "../../db/database.js";
 import { findSessionDir } from "./sessions.js";
 import { getConfig } from "../../utils/config.js";
-import { s_channelNotRegProject, s_noSessionDir, s_noSessionFiles, s_sessionsCleared } from "../../i18n/strings.js";
+import { s_channelNotRegProject, s_noSessionDir, s_noSessionFiles, s_sessionsCleared, s_sshConnectionError } from "../../i18n/strings.js";
 
 /** Wrap a string in single quotes, escaping any embedded single quotes. */
 function singleQuote(s: string): string {
@@ -43,17 +43,25 @@ export async function execute(
     const remoteDir = `${config.CODER_REMOTE_HOME}/.claude/projects/${encodedPath}`;
 
     try {
-      // Delete the files on the remote machine
+      // Delete the files on the remote machine.
+      // The shell script exits 2 if the directory doesn't exist, so we can
+      // distinguish "dir not found" (exit 2) from an SSH connection error (exit 255).
+      const shellScript = `if [ -d ${singleQuote(remoteDir)} ]; then find ${singleQuote(remoteDir)} -name "*.jsonl" -delete 2>/dev/null; else exit 2; fi`;
       execSync(
-        `ssh -o StrictHostKeyChecking=no -o BatchMode=yes ${sshHost} /bin/sh -c ${singleQuote(
-          `find ${singleQuote(remoteDir)} -name "*.jsonl" -delete 2>/dev/null`,
-        )}`,
+        `ssh -o StrictHostKeyChecking=no -o BatchMode=yes ${sshHost} /bin/sh -c ${singleQuote(shellScript)}`,
         { timeout: 15_000 },
       );
-    } catch {
-      await interaction.editReply({
-        content: s_noSessionDir(project.project_path),
-      });
+    } catch (err: unknown) {
+      const status = (err as { status?: number }).status;
+      if (status === 2) {
+        await interaction.editReply({
+          content: s_noSessionDir(project.project_path),
+        });
+      } else {
+        await interaction.editReply({
+          content: s_sshConnectionError(sshHost),
+        });
+      }
       return;
     }
 

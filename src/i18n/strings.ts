@@ -366,6 +366,12 @@ export const s_noSessionDir = (projectPath: string) =>
     `未找到 \`${projectPath}\` 的会话目录`,
     `\`${projectPath}\`에 대한 세션 디렉토리를 찾을 수 없습니다`,
   );
+export const s_sshConnectionError = (host: string) =>
+  L(
+    `SSH connection to \`${host}\` failed. Make sure \`coder config-ssh\` has been run on the bot's machine.`,
+    `无法 SSH 连接到 \`${host}\`，请确认 bot 所在机器已执行过 \`coder config-ssh\`。`,
+    `\`${host}\`에 SSH 연결에 실패했습니다. bot 머신에서 \`coder config-ssh\`를 실행했는지 확인하세요.`,
+  );
 export const s_noSessionFiles     = () => L("No session files to delete.", "没有可删除的会话文件。", "삭제할 세션 파일이 없습니다.");
 export const s_sessionsCleared    = () => L("Sessions Cleared",         "会话已清除",            "세션 정리됨");
 export const s_sessionsClearedDesc = (count: number) =>
