@@ -46,9 +46,13 @@ export async function execute(
       // Delete the files on the remote machine.
       // The shell script exits 2 if the directory doesn't exist, so we can
       // distinguish "dir not found" (exit 2) from an SSH connection error (exit 255).
+      // Pass the script as a single argument to SSH — SSH already invokes the
+      // remote shell, so adding an explicit /bin/sh -c causes double-shell
+      // interpretation that breaks argument quoting.
+      // Exit 2 = directory not found (distinguished from SSH failure in catch).
       const shellScript = `if [ -d ${singleQuote(remoteDir)} ]; then find ${singleQuote(remoteDir)} -name "*.jsonl" -delete 2>/dev/null; else exit 2; fi`;
       execSync(
-        `ssh -o StrictHostKeyChecking=no -o BatchMode=yes ${sshHost} /bin/sh -c ${singleQuote(shellScript)}`,
+        `ssh -o StrictHostKeyChecking=no -o BatchMode=yes ${sshHost} ${singleQuote(shellScript)}`,
         { timeout: 15_000 },
       );
     } catch (err: unknown) {
