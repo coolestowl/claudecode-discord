@@ -9,6 +9,7 @@ import {
   registerProject,
   setAutoApprove,
   setAuthMode,
+  setWorkspaceName,
 } from "../../db/database.js";
 import { sessionManager } from "../../claude/session-manager.js";
 import {
@@ -42,7 +43,7 @@ export async function execute(
   }
 
   // Snapshot current settings before wiping
-  const { project_path, guild_id, auto_approve, auth_mode } = project;
+  const { project_path, guild_id, auto_approve, auth_mode, workspace_name } = project;
 
   // Stop active session if any
   await sessionManager.stopSession(channelId);
@@ -54,6 +55,7 @@ export async function execute(
   registerProject(channelId, project_path, guild_id);
   if (auto_approve) setAutoApprove(channelId, true);
   setAuthMode(channelId, auth_mode);
+  if (workspace_name) setWorkspaceName(channelId, workspace_name);
 
   await interaction.editReply({
     embeds: [
