@@ -31,6 +31,9 @@ const envSchema = z.object({
   // Long-lived Claude Code OAuth token for subscription mode.
   // Passed as CLAUDE_CODE_OAUTH_TOKEN to the claude process, and used by /usage to query the API.
   OAUTH_TOKEN: z.string().optional(),
+  // How long (in seconds) to wait for tool-approval / AskUserQuestion responses before
+  // auto-denying.  Set to 0 to wait indefinitely (no automatic denial).
+  APPROVAL_TIMEOUT_SECONDS: z.coerce.number().int().min(0).default(300),
 });
 
 export type Config = z.infer<typeof envSchema>;

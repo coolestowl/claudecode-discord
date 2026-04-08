@@ -34,6 +34,7 @@ import {
   formatResultAsPlainText,
   createStopButton,
   createCompletedButton,
+  createTimedOutRow,
   splitMessage,
   type AskQuestionData,
 } from "./output-formatter.js";
@@ -155,10 +156,11 @@ class SessionManager {
     let lastActivity = s_thinking();
     let toolUseCount = 0;
     let hasTextOutput = false;
+    let sessionCompleted = false; // prevents heartbeat from restoring stop button after completion
 
     // Heartbeat timer - updates status message every 15s when no text output yet
     const heartbeatInterval = setInterval(async () => {
-      if (hasTextOutput) return; // stop heartbeat once real content is streaming
+      if (hasTextOutput || sessionCompleted) return; // stop heartbeat once real content is streaming or session is done
       const elapsed = Math.round((Date.now() - startTime) / 1000);
       const mins = Math.floor(elapsed / 60);
       const secs = elapsed % 60;
@@ -299,18 +301,27 @@ class SessionManager {
                 );
 
                 updateSessionStatus(channelId, "waiting");
-                await channel.send({ embeds: [embed], components });
+                const questionMsg = await channel.send({ embeds: [embed], components });
 
                 const answer = await new Promise<string | null>((resolve) => {
-                  const timeout = setTimeout(() => {
-                    pendingQuestions.delete(qRequestId);
-                    // Clean up custom input if pending
-                    const ci = pendingCustomInputs.get(channelId);
-                    if (ci?.requestId === qRequestId) {
-                      pendingCustomInputs.delete(channelId);
-                    }
-                    resolve(null);
-                  }, 5 * 60 * 1000);
+                  const approvalTimeoutSec = getConfig().APPROVAL_TIMEOUT_SECONDS;
+                  const timeout = approvalTimeoutSec > 0
+                    ? setTimeout(async () => {
+                        pendingQuestions.delete(qRequestId);
+                        // Clean up custom input if pending
+                        const ci = pendingCustomInputs.get(channelId);
+                        if (ci?.requestId === qRequestId) {
+                          pendingCustomInputs.delete(channelId);
+                        }
+                        // Replace interactive buttons with a disabled "timed out" indicator
+                        try {
+                          await questionMsg.edit({ components: [createTimedOutRow()] });
+                        } catch {
+                          // message may have been deleted
+                        }
+                        resolve(null);
+                      }, approvalTimeoutSec * 1000)
+                    : undefined; // 0 = wait indefinitely
 
                   pendingQuestions.set(qRequestId, {
                     resolve: (ans) => {
@@ -363,18 +374,27 @@ class SessionManager {
             );
 
             updateSessionStatus(channelId, "waiting");
-            await channel.send({
+            const approvalMsg = await channel.send({
               embeds: [embed],
               components: [row],
             });
 
-            // Wait for user decision (timeout 5 min)
+            // Wait for user decision (configurable timeout; 0 = wait indefinitely)
             return new Promise((resolve) => {
-              const timeout = setTimeout(() => {
-                pendingApprovals.delete(requestId);
-                updateSessionStatus(channelId, "online");
-                resolve({ behavior: "deny" as const, message: "Approval timed out" });
-              }, 5 * 60 * 1000);
+              const approvalTimeoutSec = getConfig().APPROVAL_TIMEOUT_SECONDS;
+              const timeout = approvalTimeoutSec > 0
+                ? setTimeout(async () => {
+                    pendingApprovals.delete(requestId);
+                    updateSessionStatus(channelId, "online");
+                    // Replace interactive buttons with a disabled "timed out" indicator
+                    try {
+                      await approvalMsg.edit({ components: [createTimedOutRow()] });
+                    } catch {
+                      // message may have been deleted
+                    }
+                    resolve({ behavior: "deny" as const, message: "Approval timed out" });
+                  }, approvalTimeoutSec * 1000)
+                : undefined; // 0 = wait indefinitely
 
               pendingApprovals.set(requestId, {
                 resolve: (decision) => {
@@ -452,6 +472,13 @@ class SessionManager {
 
         // Handle result
         if ("result" in message) {
+          // Mark completed synchronously BEFORE any await so the heartbeat
+          // callback (if already queued in the event loop) sees the flag and
+          // exits early instead of overwriting the completed button with the
+          // stop button.
+          sessionCompleted = true;
+          clearInterval(heartbeatInterval);
+
           const resultMsg = message as {
             result?: string;
             total_cost_usd?: number;

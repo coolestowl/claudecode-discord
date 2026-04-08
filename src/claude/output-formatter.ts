@@ -185,6 +185,16 @@ export function createCompletedButton(): ActionRowBuilder<ButtonBuilder> {
   );
 }
 
+export function createTimedOutRow(): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId("timed-out")
+      .setLabel("⏰ Timed out")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true),
+  );
+}
+
 export function createToolApprovalEmbed(
   toolName: string,
   input: Record<string, unknown>,
