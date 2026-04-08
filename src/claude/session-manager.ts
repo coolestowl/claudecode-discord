@@ -209,9 +209,9 @@ class SessionManager {
             let finalArgs: string[];
             if (settingsIdx !== -1) {
               finalArgs = [...claudeArgs];
-              finalArgs[settingsIdx + 1] = "user,project";
+              finalArgs[settingsIdx + 1] = "user,project,local";
             } else {
-              finalArgs = [...claudeArgs, "--setting-sources", "user,project"];
+              finalArgs = [...claudeArgs, "--setting-sources", "user,project,local"];
             }
             const remoteCmd = `cd ${singleQuote(cwd ?? remoteHome)} && env ${envStr} claude ${finalArgs.map(singleQuote).join(" ")}`;
             console.log(`[claude:ssh] host=${sshHost} cmd=${remoteCmd}`);
