@@ -132,7 +132,7 @@ export async function execute(
         content: s_workspaceCreated(workspaceName),
       });
 
-      await new Promise((r) => setTimeout(r, 2 * 60 * 1000));
+      await new Promise((r) => setTimeout(r, 1 * 60 * 1000));
 
     }
 
