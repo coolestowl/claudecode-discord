@@ -28,6 +28,9 @@ const envSchema = z.object({
   // Comma-separated key=value pairs forwarded as a single --parameter to `coder create`
   // e.g. "region=us-east-1,size=large"
   CODER_CREATE_PARAMETERS: z.string().optional(),
+  // Fixed prefix prepended to every Discord channel name created by /register
+  // e.g. "cc-" produces channels like "cc-myworkspace-ab12"
+  CHANNEL_PREFIX: z.string().default(""),
   // Long-lived Claude Code OAuth token for subscription mode.
   // Passed as CLAUDE_CODE_OAUTH_TOKEN to the claude process, and used by /usage to query the API.
   OAUTH_TOKEN: z.string().optional(),
