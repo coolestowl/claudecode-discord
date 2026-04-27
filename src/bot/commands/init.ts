@@ -201,11 +201,11 @@ export async function autocomplete(
         timeout: 10_000,
       });
       const rows = JSON.parse(stdout) as Array<
-        { Workspace?: { name: string }; name?: string }
+        { owner_name?: string; name?: string }
       >;
       const query = focused.value.toLowerCase();
       const choices = rows
-        .map((r) => r.Workspace?.name ?? r.name)
+        .map((r) =>  `${r.owner_name}/${r.name}`)
         .filter((n): n is string => typeof n === "string")
         .filter((n) => n.toLowerCase().includes(query))
         .slice(0, 25)
