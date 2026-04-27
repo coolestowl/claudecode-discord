@@ -66,11 +66,14 @@ export async function execute(
   const guildId = interaction.guildId!;
   const guild = interaction.guild!;
 
-  // Sanitise: lowercase, replace non-alphanumeric/hyphen chars, strip leading/trailing hyphens
+  // Sanitise: lowercase, replace non-alphanumeric/hyphen/slash chars, strip leading/trailing hyphens/slashes
   const workspaceName = nameInput
     .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/[^a-z0-9-/]/g, "-")
+    .replace(/^[-/]+|[-/]+$/g, "");
+
+  // Channel names don't support slashes — replace with hyphens
+  const channelWorkspaceName = workspaceName.replace(/\//g, "-");
 
   if (!workspaceName) {
     await interaction.editReply({
@@ -139,7 +142,7 @@ export async function execute(
     // 3. Create Discord channel
     const category = interaction.options.getChannel("category");
     const uniqueSuffix = Math.random().toString(36).slice(2, 6);
-    const channelName = `${config.CHANNEL_PREFIX}${workspaceName}-${uniqueSuffix}`;
+    const channelName = `${config.CHANNEL_PREFIX}${channelWorkspaceName}-${uniqueSuffix}`;
     newChannel = await guild.channels.create({
       name: channelName,
       type: ChannelType.GuildText,
