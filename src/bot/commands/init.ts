@@ -197,7 +197,7 @@ export async function autocomplete(
 
   if (focused.name === "workspace") {
     try {
-      const { stdout } = await execFile("coder", ["list", "--output", "json", "--search", "owner:me"], {
+      const { stdout } = await execFile("coder", ["list", "--output", "json", "--all"], {
         timeout: 10_000,
       });
       const rows = JSON.parse(stdout) as Array<
