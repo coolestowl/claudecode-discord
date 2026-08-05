@@ -341,7 +341,7 @@ class SessionManager {
                   };
                 }
 
-                answers[q.header] = answer;
+                answers[q.question] = answer;
               }
 
               updateSessionStatus(channelId, "online");
