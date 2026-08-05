@@ -216,7 +216,16 @@ class SessionManager {
               finalArgs = [...claudeArgs, "--setting-sources", "user,project,local"];
             }
             const remoteCmd = `cd ${singleQuote(cwd ?? remoteHome)} && env ${envStr} claude ${finalArgs.map(singleQuote).join(" ")}`;
-            console.log(`[claude:ssh] host=${sshHost} cmd=${remoteCmd}`);
+            const SECRET_ENV_KEYS = new Set([
+              "CLAUDE_CODE_OAUTH_TOKEN",
+              "ANTHROPIC_API_KEY",
+              "ANTHROPIC_AUTH_TOKEN",
+            ]);
+            const redactedEnvStr = Object.entries(remoteEnv)
+              .map(([k, v]) => `${k}=${singleQuote(SECRET_ENV_KEYS.has(k) ? "***REDACTED***" : v)}`)
+              .join(" ");
+            const redactedCmd = `cd ${singleQuote(cwd ?? remoteHome)} && env ${redactedEnvStr} claude ${finalArgs.map(singleQuote).join(" ")}`;
+            console.log(`[claude:ssh] host=${sshHost} cmd=${redactedCmd}`);
             const proc = spawn("ssh", [
               "-o", "StrictHostKeyChecking=no",
               "-o", "BatchMode=yes",
@@ -246,6 +255,7 @@ class SessionManager {
             toolName: string,
             input: Record<string, unknown>,
           ) => {
+            console.log(`[canUseTool] toolName=${JSON.stringify(toolName)} isAskUserQuestion=${toolName === "AskUserQuestion"} inputKeys=${JSON.stringify(Object.keys(input ?? {}))}`);
             toolUseCount++;
 
             // Tool activity labels for Discord display
