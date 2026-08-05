@@ -289,6 +289,8 @@ class SessionManager {
               }
 
               const answers: Record<string, string> = {};
+              const approvalTimeoutSec = getConfig().APPROVAL_TIMEOUT_SECONDS;
+              console.log(`[ask-question] start channel=${channelId} count=${questions.length} timeoutSec=${approvalTimeoutSec}`);
 
               for (let qi = 0; qi < questions.length; qi++) {
                 const q = questions[qi];
@@ -302,9 +304,9 @@ class SessionManager {
 
                 updateSessionStatus(channelId, "waiting");
                 const questionMsg = await channel.send({ embeds: [embed], components });
+                console.log(`[ask-question] posted qi=${qi} requestId=${qRequestId} question=${JSON.stringify(q.question)} header=${JSON.stringify(q.header)} messageId=${questionMsg.id}`);
 
                 const answer = await new Promise<string | null>((resolve) => {
-                  const approvalTimeoutSec = getConfig().APPROVAL_TIMEOUT_SECONDS;
                   const timeout = approvalTimeoutSec > 0
                     ? setTimeout(async () => {
                         pendingQuestions.delete(qRequestId);
@@ -313,6 +315,7 @@ class SessionManager {
                         if (ci?.requestId === qRequestId) {
                           pendingCustomInputs.delete(channelId);
                         }
+                        console.log(`[ask-question] TIMED OUT requestId=${qRequestId} after ${approvalTimeoutSec}s`);
                         // Replace interactive buttons with a disabled "timed out" indicator
                         try {
                           await questionMsg.edit({ components: [createTimedOutRow()] });
@@ -327,6 +330,7 @@ class SessionManager {
                     resolve: (ans) => {
                       clearTimeout(timeout);
                       pendingQuestions.delete(qRequestId);
+                      console.log(`[ask-question] resolved requestId=${qRequestId} answer=${JSON.stringify(ans)}`);
                       resolve(ans);
                     },
                     channelId,
@@ -335,6 +339,7 @@ class SessionManager {
 
                 if (answer === null) {
                   updateSessionStatus(channelId, "online");
+                  console.log(`[ask-question] returning deny (timeout/no-answer) requestId=${qRequestId}`);
                   return {
                     behavior: "deny" as const,
                     message: s_questionTimedOut(),
@@ -345,6 +350,7 @@ class SessionManager {
               }
 
               updateSessionStatus(channelId, "online");
+              console.log(`[ask-question] returning allow answers=${JSON.stringify(answers)}`);
               return {
                 behavior: "allow" as const,
                 updatedInput: { ...input, answers },
@@ -630,6 +636,7 @@ class SessionManager {
 
   resolveQuestion(requestId: string, answer: string): boolean {
     const pending = pendingQuestions.get(requestId);
+    console.log(`[ask-question] resolveQuestion requestId=${requestId} answer=${JSON.stringify(answer)} found=${!!pending} pendingKeys=${JSON.stringify([...pendingQuestions.keys()])}`);
     if (!pending) return false;
     pending.resolve(answer);
     return true;
