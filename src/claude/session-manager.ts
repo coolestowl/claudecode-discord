@@ -439,6 +439,25 @@ class SessionManager {
       });
 
       for await (const message of queryInstance) {
+        try {
+          const m = message as Record<string, unknown>;
+          let extra = "";
+          if (m.type === "assistant" || m.type === "user") {
+            const content = (m.message as Record<string, unknown> | undefined)?.content ?? m.content;
+            if (Array.isArray(content)) {
+              extra = content.map((b: Record<string, unknown>) => {
+                if (b.type === "tool_use") return `tool_use(name=${b.name},id=${b.id},input=${JSON.stringify(b.input).slice(0, 200)})`;
+                if (b.type === "tool_result") return `tool_result(tool_use_id=${b.tool_use_id},content=${JSON.stringify(b.content).slice(0, 200)})`;
+                if (b.type === "text") return `text(${JSON.stringify(String(b.text).slice(0, 60))})`;
+                return `${b.type}`;
+              }).join(", ");
+            }
+          }
+          console.log(`[stream] type=${m.type}${"subtype" in m ? ` subtype=${m.subtype}` : ""} ${extra}`);
+        } catch (e) {
+          console.warn(`[stream] logging error:`, e instanceof Error ? e.message : e);
+        }
+
         // Capture session ID
         if (
           message.type === "system" &&
